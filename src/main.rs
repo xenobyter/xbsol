@@ -1,7 +1,7 @@
 mod horizon;
 
-use horizon::get;
 use chrono::NaiveDateTime;
+use horizon::get_ephemerides;
 
 #[derive(Debug)]
 pub struct Ephem {
@@ -16,10 +16,12 @@ pub struct Ephem {
 }
 
 fn main() {
+    env_logger::init();
+
     let client = reqwest::Client::new();
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
-    match runtime.block_on(get(&client, "399")) {
+    match runtime.block_on(get_ephemerides(&client, "399")) {
         Ok(data) => {
             println!("Horizon data fetched successfully.");
             println!("{:#?}", data);

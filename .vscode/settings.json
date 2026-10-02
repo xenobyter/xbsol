@@ -4,5 +4,13 @@
         "EPHEM",
         "ephemerides",
         "ephems"
+    ],
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    },
+    "editor.formatOnSave": true,
+    "rust-analyzer.rustfmt.extraArgs": [
+        "--config",
+        "max_width=140"
     ]
 }
