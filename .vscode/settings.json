@@ -4,7 +4,8 @@
         "EPHEM",
         "ephemerides",
         "ephems",
-        "nasa"
+        "nasa",
+        "parst"
     ],
     "[rust]": {
         "editor.defaultFormatter": "rust-lang.rust-analyzer"

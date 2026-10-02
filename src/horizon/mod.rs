@@ -1,4 +1,7 @@
-// Zugriffe auf die Horizon API des JPL (https://ssd.jpl.nasa.gov/horizons/).
+//! Client und Parser für die [JPL Horizons REST-API](https://ssd.jpl.nasa.gov/horizons/).
+//!
+//! Dieses Modul bietet Funktionen zum Abrufen und Aufbereiten von Ephemeriden-Daten
+//! (Positions- und Geschwindigkeitsvektoren) für Himmelskörper im Sonnensystem.
 use crate::Ephem;
 use chrono::NaiveDateTime;
 use serde::Deserialize;
@@ -9,6 +12,19 @@ struct HorizonsJsonResponse {
     result: String,
 }
 
+/// Lädt Ephemeriden für ein angegebenes Objekt herunter und parst diese.
+///
+/// # Argumente
+///
+/// * `client` - Der wiederverwendbare HTTP-Client.
+/// * `command` - Der JPL-Objektbezeichner (z. B. `"399"` für die Erde).
+///
+/// # Fehler
+///
+/// Gibt einen Fehler zurück, wenn:
+/// * Der HTTP-Request fehlschlägt.
+/// * Die NASA-API eine Fehlermeldung im Antworttext zurückliefert.
+/// * Das Parsen des Textinhalts oder der Datumsangaben fehlschlägt.
 pub async fn get_ephemerides(client: &reqwest::Client, command: &str) -> Result<Vec<Ephem>, Box<dyn std::error::Error>> {
     let data = get_horizons_data(client, command).await?;
     // Mit dem '?' extrahieren wir das Result aus dem Parser und werfen Fehler hoch
@@ -114,7 +130,6 @@ fn parse_horizons_response(json_data: &str, command: &str) -> Result<Vec<Ephem>,
     Ok(ephemerides)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,7 +137,8 @@ mod tests {
 
     // Hilfs-Funktion, um eine minimale, valide NASA-Antwort zu simulieren
     fn create_mock_json(result_text: &str) -> String {
-        format!(r#"{{"signature":{{"source":"NASA","version":"1.2"}},"result":"{}"}}"#, 
+        format!(
+            r#"{{"signature":{{"source":"NASA","version":"1.2"}},"result":"{}"}}"#,
             result_text.replace('\n', "\\n") // escape Newlines für valides JSON
         )
     }
@@ -145,18 +161,15 @@ $$EOE
         // Prüfen, ob das Parsen erfolgreich war
         assert!(result.is_ok(), "Parser sollte bei validen Daten Ok zurückgeben");
         let ephems = result.unwrap();
-        
+
         // Prüfen, ob genau ein Datensatz extrahiert wurde
         assert_eq!(ephems.len(), 1);
-        
+
         let data = &ephems[0];
         assert_eq!(data.body, "399");
-        
+
         // Datum prüfen (Sollte exakt der 01. Oktober 2026 sein)
-        let expected_date = NaiveDate::from_ymd_opt(2026, 10, 1)
-            .unwrap()
-            .and_hms_micro_opt(0, 0, 0, 0)
-            .unwrap();
+        let expected_date = NaiveDate::from_ymd_opt(2026, 10, 1).unwrap().and_hms_micro_opt(0, 0, 0, 0).unwrap();
         assert_eq!(data.date, expected_date);
 
         // Physikalische Werte prüfen
@@ -169,12 +182,12 @@ $$EOE
         // Ein simulierter Fehlertext der NASA (z.B. bei falschem Planeten-Code)
         let mock_result = "ERROR: Missing COMMAND specification\\n For system help, send email to...";
         let json_data = create_mock_json(mock_result);
-        
+
         let result = parse_horizons_response(&json_data, "INVALID");
 
         // Der Parser muss hier ein Err zurückliefern!
         assert!(result.is_err(), "Parser hätte bei einer Fehlermeldung abbrechen müssen");
-        
+
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("NASA API Fehler"), "Fehlermeldung war unerwartet: {}", error_msg);
     }
@@ -184,9 +197,9 @@ $$EOE
         // Was passiert, wenn die SOE/EOE Tags da sind, aber keine Zeilen dazwischen?
         let mock_result = "$$SOE\n$$EOE";
         let json_data = create_mock_json(mock_result);
-        
+
         let result = parse_horizons_response(&json_data, "399");
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0, "Vektor sollte bei leeren SOE-Tags leer sein");
     }
