@@ -113,3 +113,81 @@ fn parse_horizons_response(json_data: &str, command: &str) -> Result<Vec<Ephem>,
 
     Ok(ephemerides)
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveDate;
+
+    // Hilfs-Funktion, um eine minimale, valide NASA-Antwort zu simulieren
+    fn create_mock_json(result_text: &str) -> String {
+        format!(r#"{{"signature":{{"source":"NASA","version":"1.2"}},"result":"{}"}}"#, 
+            result_text.replace('\n', "\\n") // escape Newlines für valides JSON
+        )
+    }
+
+    #[test]
+    fn test_parse_valid_ephemerides() {
+        // Ein echter Datenblock (1 Tag) aus der NASA Response
+        let mock_result = "\
+*******************************************************************************
+$$SOE
+2461314.500000000 = A.D. 2026-Oct-01 00:00:00.0000 TDB
+ X = 1.485257166019058E+08 Y = 1.946860462820820E+07 Z =-2.483661492046900E+03
+ VX=-4.343910994914796E+00 VY= 2.941844372763652E+01 VZ=-1.658292238307268E-03
+$$EOE
+*******************************************************************************";
+
+        let json_data = create_mock_json(mock_result);
+        let result = parse_horizons_response(&json_data, "399");
+
+        // Prüfen, ob das Parsen erfolgreich war
+        assert!(result.is_ok(), "Parser sollte bei validen Daten Ok zurückgeben");
+        let ephems = result.unwrap();
+        
+        // Prüfen, ob genau ein Datensatz extrahiert wurde
+        assert_eq!(ephems.len(), 1);
+        
+        let data = &ephems[0];
+        assert_eq!(data.body, "399");
+        
+        // Datum prüfen (Sollte exakt der 01. Oktober 2026 sein)
+        let expected_date = NaiveDate::from_ymd_opt(2026, 10, 1)
+            .unwrap()
+            .and_hms_micro_opt(0, 0, 0, 0)
+            .unwrap();
+        assert_eq!(data.date, expected_date);
+
+        // Physikalische Werte prüfen
+        assert_eq!(data.x, 148525716.6019058);
+        assert_eq!(data.vx, -4.343910994914796);
+    }
+
+    #[test]
+    fn test_parse_nasa_error_response() {
+        // Ein simulierter Fehlertext der NASA (z.B. bei falschem Planeten-Code)
+        let mock_result = "ERROR: Missing COMMAND specification\\n For system help, send email to...";
+        let json_data = create_mock_json(mock_result);
+        
+        let result = parse_horizons_response(&json_data, "INVALID");
+
+        // Der Parser muss hier ein Err zurückliefern!
+        assert!(result.is_err(), "Parser hätte bei einer Fehlermeldung abbrechen müssen");
+        
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("NASA API Fehler"), "Fehlermeldung war unerwartet: {}", error_msg);
+    }
+
+    #[test]
+    fn test_parse_empty_section() {
+        // Was passiert, wenn die SOE/EOE Tags da sind, aber keine Zeilen dazwischen?
+        let mock_result = "$$SOE\n$$EOE";
+        let json_data = create_mock_json(mock_result);
+        
+        let result = parse_horizons_response(&json_data, "399");
+        
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0, "Vektor sollte bei leeren SOE-Tags leer sein");
+    }
+}
