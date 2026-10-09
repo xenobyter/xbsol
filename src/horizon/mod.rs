@@ -2,8 +2,8 @@
 //!
 //! Dieses Modul bietet Funktionen zum Abrufen und Aufbereiten von Ephemeriden-Daten
 //! (Positions- und Geschwindigkeitsvektoren) für Himmelskörper im Sonnensystem.
-use crate::Ephem;
-use chrono::NaiveDateTime;
+use crate::model::{BodyMeta, EphemerisRecord, StateVector};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Deserialize;
 
 // Die fehlende Struct definieren, damit Serde das JSON-Feld "result" findet
@@ -17,7 +17,7 @@ struct HorizonsJsonResponse {
 /// # Argumente
 ///
 /// * `client` - Der wiederverwendbare HTTP-Client.
-/// * `command` - Der JPL-Objektbezeichner (z. B. `"399"` für die Erde).
+/// * `body` - Metadaten zum Himmelskörper (inkl. JPL-Objektbezeichner).
 ///
 /// # Fehler
 ///
@@ -25,10 +25,11 @@ struct HorizonsJsonResponse {
 /// * Der HTTP-Request fehlschlägt.
 /// * Die NASA-API eine Fehlermeldung im Antworttext zurückliefert.
 /// * Das Parsen des Textinhalts oder der Datumsangaben fehlschlägt.
-pub async fn get_ephemerides(client: &reqwest::Client, command: &str) -> Result<Vec<Ephem>, Box<dyn std::error::Error>> {
+pub async fn get_ephemerides(client: &reqwest::Client, body: BodyMeta) -> Result<Vec<EphemerisRecord>, Box<dyn std::error::Error>> {
+    let command = body.command();
     let data = get_horizons_data(client, command).await?;
     // Mit dem '?' extrahieren wir das Result aus dem Parser und werfen Fehler hoch
-    let parsed_data = parse_horizons_response(&data, command)?;
+    let parsed_data = parse_horizons_response(&data, body)?;
     Ok(parsed_data)
 }
 
@@ -56,8 +57,9 @@ async fn get_horizons_data(client: &reqwest::Client, command: &str) -> Result<St
     Ok(text)
 }
 
-fn parse_horizons_response(json_data: &str, command: &str) -> Result<Vec<Ephem>, Box<dyn std::error::Error>> {
+fn parse_horizons_response(json_data: &str, body: BodyMeta) -> Result<Vec<EphemerisRecord>, Box<dyn std::error::Error>> {
     let response: HorizonsJsonResponse = serde_json::from_str(json_data)?;
+    let command = body.command();
 
     // Schneller Abbruch, falls die NASA eine Fehlermeldung schickt
     if response.result.contains("ERROR:") || response.result.contains("Ambiguous") || response.result.contains("Missing") {
@@ -88,7 +90,7 @@ fn parse_horizons_response(json_data: &str, command: &str) -> Result<Vec<Ephem>,
         .collect();
 
     // 3er-Gruppen verarbeiten und fehlerhafte Datensätze direkt filtern
-    let ephemerides: Vec<Ephem> = lines
+    let ephemerides: Vec<EphemerisRecord> = lines
         .chunks(3)
         .filter_map(|chunk| {
             // Versuche, den Chunk in ein festes 3er-Array umzuwandeln
@@ -107,22 +109,27 @@ fn parse_horizons_response(json_data: &str, command: &str) -> Result<Vec<Ephem>,
                 .trim();
 
             // Datum parsen
-            let date = NaiveDateTime::parse_from_str(clean_date, "%Y-%b-%d %H:%M:%S%.f")
-                .unwrap_or_else(|_| chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc());
+            let date = NaiveDateTime::parse_from_str(clean_date, "%Y-%b-%d %H:%M:%S%.f").ok()?;
+            let epoch = DateTime::<Utc>::from_naive_utc_and_offset(date, Utc);
 
             // Vektoren extrahieren
             let (x, y, z) = parse_vector(line_pos, &['X', 'Y', 'Z', '='])?;
             let (vx, vy, vz) = parse_vector(line_vel, &['V', 'X', 'Y', 'Z', '='])?;
 
-            Some(Ephem {
-                date,
-                body: command.to_string(),
-                x,
-                y,
-                z,
-                vx,
-                vy,
-                vz,
+            Some(EphemerisRecord {
+                body_id: body.body_id,
+                center: "500@10".to_string(),
+                ref_plane: "ECLIPTIC".to_string(),
+                step: "1 d".to_string(),
+                vector: StateVector {
+                    epoch,
+                    x_km: x,
+                    y_km: y,
+                    z_km: z,
+                    vx_km_s: vx,
+                    vy_km_s: vy,
+                    vz_km_s: vz,
+                },
             })
         })
         .collect();
@@ -133,6 +140,7 @@ fn parse_horizons_response(json_data: &str, command: &str) -> Result<Vec<Ephem>,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::BodyId;
     use chrono::NaiveDate;
 
     // Hilfs-Funktion, um eine minimale, valide NASA-Antwort zu simulieren
@@ -156,7 +164,7 @@ $$EOE
 *******************************************************************************";
 
         let json_data = create_mock_json(mock_result);
-        let result = parse_horizons_response(&json_data, "399");
+        let result = parse_horizons_response(&json_data, BodyMeta { body_id: BodyId::Earth });
 
         // Prüfen, ob das Parsen erfolgreich war
         assert!(result.is_ok(), "Parser sollte bei validen Daten Ok zurückgeben");
@@ -166,15 +174,15 @@ $$EOE
         assert_eq!(ephems.len(), 1);
 
         let data = &ephems[0];
-        assert_eq!(data.body, "399");
+        assert_eq!(data.body_id, BodyId::Earth);
 
         // Datum prüfen (Sollte exakt der 01. Oktober 2026 sein)
         let expected_date = NaiveDate::from_ymd_opt(2026, 10, 1).unwrap().and_hms_micro_opt(0, 0, 0, 0).unwrap();
-        assert_eq!(data.date, expected_date);
+        assert_eq!(data.vector.epoch.naive_utc(), expected_date);
 
         // Physikalische Werte prüfen
-        assert_eq!(data.x, 148525716.6019058);
-        assert_eq!(data.vx, -4.343910994914796);
+        assert_eq!(data.vector.x_km, 148525716.6019058);
+        assert_eq!(data.vector.vx_km_s, -4.343910994914796);
     }
 
     #[test]
@@ -183,7 +191,7 @@ $$EOE
         let mock_result = "ERROR: Missing COMMAND specification\\n For system help, send email to...";
         let json_data = create_mock_json(mock_result);
 
-        let result = parse_horizons_response(&json_data, "INVALID");
+        let result = parse_horizons_response(&json_data, BodyMeta { body_id: BodyId::Earth });
 
         // Der Parser muss hier ein Err zurückliefern!
         assert!(result.is_err(), "Parser hätte bei einer Fehlermeldung abbrechen müssen");
@@ -198,7 +206,7 @@ $$EOE
         let mock_result = "$$SOE\n$$EOE";
         let json_data = create_mock_json(mock_result);
 
-        let result = parse_horizons_response(&json_data, "399");
+        let result = parse_horizons_response(&json_data, BodyMeta { body_id: BodyId::Earth });
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0, "Vektor sollte bei leeren SOE-Tags leer sein");
