@@ -1,5 +1,7 @@
+mod app_state;
 mod horizon;
 mod model;
+mod ui;
 use horizon::get_ephemerides;
 use model::{BODIES, EphemerisTable};
 
@@ -32,4 +34,9 @@ fn main() {
 
     let day_index = table.build_day_index();
     println!("Indexed days: {}", day_index.len());
+
+    if let Err(error) = ui::run_ui(day_index) {
+        eprintln!("Failed to run UI: {error}");
+        std::process::exit(1);
+    }
 }

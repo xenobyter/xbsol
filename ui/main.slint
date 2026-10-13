@@ -1,0 +1,36 @@
+import { VerticalBox, HorizontalBox, Button } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "xbsol";
+    width: 480px;
+    height: 220px;
+
+    in-out property <string> date_text: "No data";
+    callback prev_day();
+    callback next_day();
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        Text {
+            text: root.date_text;
+            horizontal-alignment: center;
+            font-size: 22px;
+        }
+
+        HorizontalBox {
+            spacing: 12px;
+
+            Button {
+                text: "← Prev day";
+                clicked => { root.prev_day(); }
+            }
+
+            Button {
+                text: "Next day →";
+                clicked => { root.next_day(); }
+            }
+        }
+    }
+}
