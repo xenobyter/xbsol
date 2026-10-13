@@ -3,29 +3,53 @@ use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BodyId {
+    Sun,
+    Mercury,
+    Venus,
     Earth,
     Moon,
+    Mars,
+    Phobos,
+    Deimos,
 }
 
 impl BodyId {
     pub const fn horizons_command(self) -> &'static str {
         match self {
+            BodyId::Sun => "10",
+            BodyId::Mercury => "199",
+            BodyId::Venus => "299",
             BodyId::Earth => "399",
             BodyId::Moon => "301",
+            BodyId::Mars => "499",
+            BodyId::Phobos => "401",
+            BodyId::Deimos => "402",
         }
     }
 
     pub const fn name(self) -> &'static str {
         match self {
+            BodyId::Sun => "Sun",
+            BodyId::Mercury => "Mercury",
+            BodyId::Venus => "Venus",
             BodyId::Earth => "Earth",
             BodyId::Moon => "Moon",
+            BodyId::Mars => "Mars",
+            BodyId::Phobos => "Phobos",
+            BodyId::Deimos => "Deimos",
         }
     }
 
     pub const fn radius_km(self) -> f64 {
         match self {
+            BodyId::Sun => 696_340.0,
+            BodyId::Mercury => 2_439.7,
+            BodyId::Venus => 6_051.8,
             BodyId::Earth => 6_371.01,
             BodyId::Moon => 1_737.53,
+            BodyId::Mars => 3_389.5,
+            BodyId::Phobos => 11.2667,
+            BodyId::Deimos => 6.2,
         }
     }
 }
@@ -41,7 +65,16 @@ impl BodyMeta {
     }
 }
 
-pub const BODIES: &[BodyMeta] = &[BodyMeta { body_id: BodyId::Earth }, BodyMeta { body_id: BodyId::Moon }];
+pub const BODIES: &[BodyMeta] = &[
+    BodyMeta { body_id: BodyId::Sun },
+    BodyMeta { body_id: BodyId::Mercury },
+    BodyMeta { body_id: BodyId::Venus },
+    BodyMeta { body_id: BodyId::Earth },
+    BodyMeta { body_id: BodyId::Moon },
+    BodyMeta { body_id: BodyId::Mars },
+    BodyMeta { body_id: BodyId::Phobos },
+    BodyMeta { body_id: BodyId::Deimos },
+];
 
 #[derive(Debug, Clone)]
 pub struct StateVector {

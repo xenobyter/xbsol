@@ -6,6 +6,10 @@ use crate::model::{BodyMeta, EphemerisRecord, StateVector};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Deserialize;
 
+const HORIZONS_CENTER: &str = "500@10";
+const HORIZONS_REF_PLANE: &str = "ECLIPTIC";
+const HORIZONS_STEP_SIZE: &str = "1 d";
+
 // Die fehlende Struct definieren, damit Serde das JSON-Feld "result" findet
 #[derive(Deserialize)]
 struct HorizonsJsonResponse {
@@ -43,8 +47,8 @@ async fn get_horizons_data(client: &reqwest::Client, command: &str) -> Result<St
         ("MAKE_EPHEM", "YES"),
         ("OBJ_DATA", "NO"),
         ("EPHEM_TYPE", "VECTORS"),
-        ("START_TIME", "2026-10-01"),
-        ("STOP_TIME", "2026-10-08"),
+        ("START_TIME", "2026-01-01"),
+        ("STOP_TIME", "2026-12-31"),
         ("STEP_SIZE", "1 d"),
         ("VEC_TABLE", "2"),
         ("OUT_UNITS", "KM-S"),
@@ -118,9 +122,9 @@ fn parse_horizons_response(json_data: &str, body: BodyMeta) -> Result<Vec<Epheme
 
             Some(EphemerisRecord {
                 body_id: body.body_id,
-                center: "500@10".to_string(),
-                ref_plane: "ECLIPTIC".to_string(),
-                step: "1 d".to_string(),
+                center: HORIZONS_CENTER.to_string(),
+                ref_plane: HORIZONS_REF_PLANE.to_string(),
+                step: HORIZONS_STEP_SIZE.to_string(),
                 vector: StateVector {
                     epoch,
                     x_km: x,

@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::model::EphemerisDayIndex;
+use slint::{Color, ModelRc, VecModel};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -9,7 +10,17 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
     let ui = MainWindow::new()?;
     let app_state = Rc::new(RefCell::new(AppState::new(day_index)));
 
-    ui.set_date_text(app_state.borrow().date_text().into());
+    {
+        let state = app_state.borrow();
+        ui.set_date_text(state.date_text().into());
+        let camera = state.camera();
+        ui.set_camera_azimuth_deg(camera.azimuth_deg);
+        ui.set_camera_elevation_deg(camera.elevation_deg);
+        ui.set_camera_distance_au(camera.distance_au);
+        ui.set_camera_fov_deg(camera.fov_deg);
+    }
+
+    refresh_scene(&ui, &app_state.borrow());
 
     let weak_prev = ui.as_weak();
     let state_prev = Rc::clone(&app_state);
@@ -17,6 +28,7 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
         state_prev.borrow_mut().prev_day();
         if let Some(ui) = weak_prev.upgrade() {
             ui.set_date_text(state_prev.borrow().date_text().into());
+            refresh_scene(&ui, &state_prev.borrow());
         }
     });
 
@@ -26,8 +38,53 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
         state_next.borrow_mut().next_day();
         if let Some(ui) = weak_next.upgrade() {
             ui.set_date_text(state_next.borrow().date_text().into());
+            refresh_scene(&ui, &state_next.borrow());
+        }
+    });
+
+    let weak_auto = ui.as_weak();
+    let state_auto = Rc::clone(&app_state);
+    ui.on_toggle_auto_play(move || {
+        state_auto.borrow_mut().toggle_auto_play();
+        if let Some(ui) = weak_auto.upgrade() {
+            ui.set_auto_play(state_auto.borrow().is_auto_play());
+        }
+    });
+
+    let weak_tick = ui.as_weak();
+    let state_tick = Rc::clone(&app_state);
+    ui.on_auto_tick(move || {
+        if state_tick.borrow().is_auto_play() {
+            let mut state = state_tick.borrow_mut();
+            state.advance_auto_step(0.25);
+            let current = state.date_text();
+            if let Some(ui) = weak_tick.upgrade() {
+                ui.set_date_text(current.into());
+                refresh_scene(&ui, &state);
+            }
         }
     });
 
     ui.run()
+}
+
+fn refresh_scene(ui: &MainWindow, state: &AppState) {
+    let width = ui.get_scene_width().max(1.0);
+    let height = ui.get_scene_height().max(1.0);
+    let frame = state.build_scene_frame(width, height);
+
+    let sprites: Vec<BodySprite> = frame
+        .bodies
+        .into_iter()
+        .map(|body| BodySprite {
+            name: body.name.into(),
+            x_px: body.x_px,
+            y_px: body.y_px,
+            radius_px: body.radius_px,
+            color: Color::from_rgb_u8(body.color_rgb.0, body.color_rgb.1, body.color_rgb.2),
+        })
+        .collect();
+
+    let model = Rc::new(VecModel::from(sprites));
+    ui.set_body_sprites(ModelRc::from(model));
 }

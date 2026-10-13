@@ -14,5 +14,8 @@
     "rust-analyzer.rustfmt.extraArgs": [
         "--config",
         "max_width=140"
-    ]
+    ],
+    "chat.tools.terminal.autoApprove": {
+        "cargo run": true
+    }
 }

@@ -1,22 +1,74 @@
 import { VerticalBox, HorizontalBox, Button } from "std-widgets.slint";
 
+struct BodySprite {
+    name: string,
+    x_px: float,
+    y_px: float,
+    radius_px: float,
+    color: color,
+}
+
 export component MainWindow inherits Window {
     title: "xbsol";
-    width: 480px;
-    height: 220px;
+    width: 960px;
+    height: 700px;
 
     in-out property <string> date_text: "No data";
+    in-out property <[BodySprite]> body_sprites: [];
+    out property <float> scene_width: scene.width / 1px;
+    out property <float> scene_height: scene.height / 1px;
+
+    // Kamera-State (hybrid): Source-of-truth in Rust, Spiegelung in Slint.
+    in-out property <float> camera_azimuth_deg: 0;
+    in-out property <float> camera_elevation_deg: 0;
+    in-out property <float> camera_distance_au: 0;
+    in-out property <float> camera_fov_deg: 0;
+
     callback prev_day();
     callback next_day();
+    callback toggle_auto_play();
+    callback auto_tick();
+
+    Timer {
+        running: root.auto_play;
+        interval: 50ms;
+        triggered => {
+            root.auto_tick();
+            if (root.auto_play) {
+                root.auto_play = false;
+                root.auto_play = true;
+            }
+        }
+    }
+
+    in-out property <bool> auto_play: false;
 
     VerticalBox {
         padding: 16px;
-        spacing: 16px;
+        spacing: 10px;
 
         Text {
             text: root.date_text;
             horizontal-alignment: center;
-            font-size: 22px;
+            font-size: 20px;
+        }
+
+        scene := Rectangle {
+            horizontal-stretch: 1;
+            vertical-stretch: 1;
+            min-height: 520px;
+            background: #0a0f1a;
+            border-color: #243752;
+            border-width: 1px;
+
+            for body[i] in root.body_sprites : Rectangle {
+                width: body.radius_px * 2px;
+                height: body.radius_px * 2px;
+                x: body.x_px * 1px - self.width / 2;
+                y: body.y_px * 1px - self.height / 2;
+                border-radius: self.width / 2;
+                background: body.color;
+            }
         }
 
         HorizontalBox {
@@ -30,6 +82,14 @@ export component MainWindow inherits Window {
             Button {
                 text: "Next day →";
                 clicked => { root.next_day(); }
+            }
+
+            Button {
+                text: root.auto_play ? "Stop" : "Auto";
+                clicked => {
+                    root.auto_play = !root.auto_play;
+                    root.toggle_auto_play();
+                }
             }
         }
     }
