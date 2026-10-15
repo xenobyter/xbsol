@@ -1,4 +1,4 @@
-import { VerticalBox, HorizontalBox, Button } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, ComboBox } from "std-widgets.slint";
 
 struct BodySprite {
     name: string,
@@ -119,29 +119,14 @@ export component MainWindow inherits Window {
 
         HorizontalBox {
             spacing: 8px;
-            Button {
-                text: "Sun";
-                clicked => { root.selected_center_name = "Sun"; root.select_center("Sun"); }
-            }
-            Button {
-                text: "Mercury";
-                clicked => { root.selected_center_name = "Mercury"; root.select_center("Mercury"); }
-            }
-            Button {
-                text: "Venus";
-                clicked => { root.selected_center_name = "Venus"; root.select_center("Venus"); }
-            }
-            Button {
-                text: "Earth";
-                clicked => { root.selected_center_name = "Earth"; root.select_center("Earth"); }
-            }
-            Button {
-                text: "Moon";
-                clicked => { root.selected_center_name = "Moon"; root.select_center("Moon"); }
-            }
-            Button {
-                text: "Mars";
-                clicked => { root.selected_center_name = "Mars"; root.select_center("Mars"); }
+            ComboBox {
+                width: 180px;
+                model: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars"];
+                current-value: root.selected_center_name;
+                selected => {
+                    root.selected_center_name = self.current-value;
+                    root.select_center(self.current-value);
+                }
             }
         }
 
