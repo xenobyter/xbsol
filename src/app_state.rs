@@ -51,9 +51,15 @@ const DEFAULT_AZIMUTH_DEG: f32 = 135.0;
 const DEFAULT_ELEVATION_DEG: f32 = 58.0;
 const DEFAULT_DISTANCE_AU: f32 = 4.5;
 const DEFAULT_FOV_DEG: f32 = 50.0;
+const MERCURY_DISTANCE_AU: f32 = 1.2;
+const VENUS_DISTANCE_AU: f32 = 1.2;
+const EARTH_DISTANCE_AU: f32 = 0.015;
+const MOON_DISTANCE_AU: f32 = 0.12;
+const MARS_DISTANCE_AU: f32 = 0.0015;
+const MARS_FOV_DEG: f32 = 35.0;
 const MIN_ELEVATION_DEG: f32 = -85.0;
 const MAX_ELEVATION_DEG: f32 = 85.0;
-const MIN_DISTANCE_AU: f32 = 0.002;
+const MIN_DISTANCE_AU: f32 = 0.0015;
 const MAX_DISTANCE_AU: f32 = 12.0;
 const ORBIT_DEG_PER_PIXEL: f32 = 0.25;
 const ZOOM_FACTOR_PER_STEP: f32 = 1.12;
@@ -179,6 +185,31 @@ impl AppState {
 
         self.selected_center = body_id;
         self.camera_target_au = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+        self.camera = Self::preset_camera_for_center(body_id);
+    }
+
+    fn preset_camera_for_center(body_id: BodyId) -> CameraState {
+        let distance_au = match body_id {
+            BodyId::Sun => DEFAULT_DISTANCE_AU,
+            BodyId::Mercury => MERCURY_DISTANCE_AU,
+            BodyId::Venus => VENUS_DISTANCE_AU,
+            BodyId::Earth => EARTH_DISTANCE_AU,
+            BodyId::Moon => MOON_DISTANCE_AU,
+            BodyId::Mars => MARS_DISTANCE_AU,
+            BodyId::Phobos | BodyId::Deimos => MARS_DISTANCE_AU,
+        };
+
+        let fov_deg = match body_id {
+            BodyId::Mars | BodyId::Phobos | BodyId::Deimos => MARS_FOV_DEG,
+            _ => DEFAULT_FOV_DEG,
+        };
+
+        CameraState {
+            azimuth_deg: DEFAULT_AZIMUTH_DEG,
+            elevation_deg: DEFAULT_ELEVATION_DEG,
+            distance_au,
+            fov_deg,
+        }
     }
 
     pub fn date_text(&self) -> String {

@@ -72,7 +72,12 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
         state.set_center(target);
 
         if let Some(ui) = weak_select_center.upgrade() {
+            let camera = state.camera();
             ui.set_selected_center_name(target.name().to_string().into());
+            ui.set_camera_azimuth_deg(camera.azimuth_deg);
+            ui.set_camera_elevation_deg(camera.elevation_deg);
+            ui.set_camera_distance_au(camera.distance_au);
+            ui.set_camera_fov_deg(camera.fov_deg);
             refresh_scene(&ui, &state);
         }
     });
