@@ -5,10 +5,48 @@
 use crate::model::{BodyMeta, EphemerisRecord, StateVector};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Deserialize;
+use std::fmt;
 
 const HORIZONS_CENTER: &str = "500@10";
 const HORIZONS_REF_PLANE: &str = "ECLIPTIC";
 const HORIZONS_STEP_SIZE: &str = "1 d";
+
+#[derive(Debug)]
+enum HorizonsParseError {
+    ApiError { command: String, first_line: String },
+    MissingSoeEoeMarkers,
+    IncompleteChunk { line_count: usize },
+    InvalidDateLine { line: String },
+    InvalidDateFormat { value: String, source: chrono::ParseError },
+    InvalidVectorLine { line: String },
+    InvalidVectorValue { token: String, source: std::num::ParseFloatError },
+}
+
+impl fmt::Display for HorizonsParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ApiError { command, first_line } => {
+                write!(f, "NASA API Fehler für '{}': {}", command, first_line)
+            }
+            Self::MissingSoeEoeMarkers => write!(f, "Horizons-Response enthält keine $$SOE/$$EOE Marker"),
+            Self::IncompleteChunk { line_count } => write!(f, "Unvollständiger Datensatzblock mit {} Zeilen", line_count),
+            Self::InvalidDateLine { line } => write!(f, "Ungültige Datumszeile: {}", line),
+            Self::InvalidDateFormat { value, .. } => write!(f, "Ungültiges Datumsformat: {}", value),
+            Self::InvalidVectorLine { line } => write!(f, "Ungültige Vektorzeile: {}", line),
+            Self::InvalidVectorValue { token, .. } => write!(f, "Ungültiger numerischer Wert in Vektorzeile: {}", token),
+        }
+    }
+}
+
+impl std::error::Error for HorizonsParseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::InvalidDateFormat { source, .. } => Some(source),
+            Self::InvalidVectorValue { source, .. } => Some(source),
+            _ => None,
+        }
+    }
+}
 
 // Die fehlende Struct definieren, damit Serde das JSON-Feld "result" findet
 #[derive(Deserialize)]
@@ -65,80 +103,147 @@ fn parse_horizons_response(json_data: &str, body: BodyMeta) -> Result<Vec<Epheme
     let response: HorizonsJsonResponse = serde_json::from_str(json_data)?;
     let command = body.command();
 
-    // Schneller Abbruch, falls die NASA eine Fehlermeldung schickt
-    if response.result.contains("ERROR:") || response.result.contains("Ambiguous") || response.result.contains("Missing") {
-        let first_line = response.result.lines().next().unwrap_or("Unbekannter Fehler");
-        return Err(format!("NASA API Fehler für '{}': {}", command, first_line).into());
+    ensure_no_api_error(&response.result, command)?;
+    let lines = extract_data_lines(&response.result)?;
+
+    let mut ephemerides = Vec::new();
+    for chunk in lines.chunks(3) {
+        if chunk.len() != 3 {
+            return Err(HorizonsParseError::IncompleteChunk { line_count: chunk.len() }.into());
+        }
+
+        let record = parse_record_chunk(body, chunk[0], chunk[1], chunk[2])?;
+        ephemerides.push(record);
     }
 
-    // Hilfsfunktion zum Bereinigen und Parsen der 3D-Vektoren
-    let parse_vector = |line: &str, chars_to_remove: &[char]| -> Option<(f64, f64, f64)> {
-        let clean = line.replace(chars_to_remove, "");
-        let mut tokens = clean.split_whitespace();
-
-        let x = tokens.next()?.parse::<f64>().ok()?;
-        let y = tokens.next()?.parse::<f64>().ok()?;
-        let z = tokens.next()?.parse::<f64>().ok()?;
-
-        Some((x, y, z))
-    };
-
-    let lines: Vec<&str> = response
-        .result
-        .lines()
-        .map(|line| line.trim())
-        .skip_while(|line| !line.starts_with("$$SOE")) // Überspringe alles vor $$SOE
-        .skip(1) // Überspringe die $$SOE-Zeile selbst
-        .take_while(|line| !line.starts_with("$$EOE")) // Nimm alle Zeilen bis $$EOE
-        .filter(|line| !line.is_empty()) // Ignoriere leere Zeilen
-        .collect();
-
-    // 3er-Gruppen verarbeiten und fehlerhafte Datensätze direkt filtern
-    let ephemerides: Vec<EphemerisRecord> = lines
-        .chunks(3)
-        .filter_map(|chunk| {
-            // Versuche, den Chunk in ein festes 3er-Array umzuwandeln
-            let [line_date, line_pos, line_vel] = <[&str; 3]>::try_from(chunk).ok()?;
-
-            // Datum nach dem " = " extrahieren
-            let clean_date = line_date
-                .split('=')
-                .nth(1)?
-                .trim()
-                .trim_start_matches("A.D. ")
-                .split("TDB")
-                .next()?
-                .split("UT")
-                .next()?
-                .trim();
-
-            // Datum parsen
-            let date = NaiveDateTime::parse_from_str(clean_date, "%Y-%b-%d %H:%M:%S%.f").ok()?;
-            let epoch = DateTime::<Utc>::from_naive_utc_and_offset(date, Utc);
-
-            // Vektoren extrahieren
-            let (x, y, z) = parse_vector(line_pos, &['X', 'Y', 'Z', '='])?;
-            let (vx, vy, vz) = parse_vector(line_vel, &['V', 'X', 'Y', 'Z', '='])?;
-
-            Some(EphemerisRecord {
-                body_id: body.body_id,
-                center: HORIZONS_CENTER.to_string(),
-                ref_plane: HORIZONS_REF_PLANE.to_string(),
-                step: HORIZONS_STEP_SIZE.to_string(),
-                vector: StateVector {
-                    epoch,
-                    x_km: x,
-                    y_km: y,
-                    z_km: z,
-                    vx_km_s: vx,
-                    vy_km_s: vy,
-                    vz_km_s: vz,
-                },
-            })
-        })
-        .collect();
-
     Ok(ephemerides)
+}
+
+fn ensure_no_api_error(result: &str, command: &str) -> Result<(), HorizonsParseError> {
+    if result.contains("ERROR:") || result.contains("Ambiguous") || result.contains("Missing") {
+        let first_line = result.lines().next().unwrap_or("Unbekannter Fehler").to_string();
+        return Err(HorizonsParseError::ApiError {
+            command: command.to_string(),
+            first_line,
+        });
+    }
+    Ok(())
+}
+
+fn extract_data_lines(result: &str) -> Result<Vec<&str>, HorizonsParseError> {
+    let mut in_data = false;
+    let mut seen_soe = false;
+    let mut seen_eoe = false;
+    let mut lines = Vec::new();
+
+    for line in result.lines().map(|l| l.trim()) {
+        if line.starts_with("$$SOE") {
+            seen_soe = true;
+            in_data = true;
+            continue;
+        }
+        if line.starts_with("$$EOE") {
+            seen_eoe = true;
+            break;
+        }
+        if in_data && !line.is_empty() {
+            lines.push(line);
+        }
+    }
+
+    if !seen_soe || !seen_eoe {
+        return Err(HorizonsParseError::MissingSoeEoeMarkers);
+    }
+
+    Ok(lines)
+}
+
+fn parse_record_chunk(body: BodyMeta, line_date: &str, line_pos: &str, line_vel: &str) -> Result<EphemerisRecord, HorizonsParseError> {
+    let epoch = parse_epoch(line_date)?;
+    let (x, y, z) = parse_vector3(line_pos, &['X', 'Y', 'Z', '='])?;
+    let (vx, vy, vz) = parse_vector3(line_vel, &['V', 'X', 'Y', 'Z', '='])?;
+
+    Ok(EphemerisRecord {
+        body_id: body.body_id,
+        center: HORIZONS_CENTER.to_string(),
+        ref_plane: HORIZONS_REF_PLANE.to_string(),
+        step: HORIZONS_STEP_SIZE.to_string(),
+        vector: StateVector {
+            epoch,
+            x_km: x,
+            y_km: y,
+            z_km: z,
+            vx_km_s: vx,
+            vy_km_s: vy,
+            vz_km_s: vz,
+        },
+    })
+}
+
+fn parse_epoch(line_date: &str) -> Result<DateTime<Utc>, HorizonsParseError> {
+    let clean_date = line_date
+        .split('=')
+        .nth(1)
+        .ok_or_else(|| HorizonsParseError::InvalidDateLine {
+            line: line_date.to_string(),
+        })?
+        .trim()
+        .trim_start_matches("A.D. ")
+        .split("TDB")
+        .next()
+        .ok_or_else(|| HorizonsParseError::InvalidDateLine {
+            line: line_date.to_string(),
+        })?
+        .split("UT")
+        .next()
+        .ok_or_else(|| HorizonsParseError::InvalidDateLine {
+            line: line_date.to_string(),
+        })?
+        .trim()
+        .to_string();
+
+    let date = NaiveDateTime::parse_from_str(&clean_date, "%Y-%b-%d %H:%M:%S%.f").map_err(|source| HorizonsParseError::InvalidDateFormat {
+        value: clean_date,
+        source,
+    })?;
+
+    Ok(DateTime::<Utc>::from_naive_utc_and_offset(date, Utc))
+}
+
+fn parse_vector3(line: &str, chars_to_remove: &[char]) -> Result<(f64, f64, f64), HorizonsParseError> {
+    let clean = line.replace(chars_to_remove, "");
+    let mut tokens = clean.split_whitespace();
+
+    let x_token = tokens.next().ok_or_else(|| HorizonsParseError::InvalidVectorLine {
+        line: line.to_string(),
+    })?;
+    let y_token = tokens.next().ok_or_else(|| HorizonsParseError::InvalidVectorLine {
+        line: line.to_string(),
+    })?;
+    let z_token = tokens.next().ok_or_else(|| HorizonsParseError::InvalidVectorLine {
+        line: line.to_string(),
+    })?;
+
+    let x = x_token
+        .parse::<f64>()
+        .map_err(|source| HorizonsParseError::InvalidVectorValue {
+            token: x_token.to_string(),
+            source,
+        })?;
+    let y = y_token
+        .parse::<f64>()
+        .map_err(|source| HorizonsParseError::InvalidVectorValue {
+            token: y_token.to_string(),
+            source,
+        })?;
+    let z = z_token
+        .parse::<f64>()
+        .map_err(|source| HorizonsParseError::InvalidVectorValue {
+            token: z_token.to_string(),
+            source,
+        })?;
+
+    Ok((x, y, z))
 }
 
 #[cfg(test)]

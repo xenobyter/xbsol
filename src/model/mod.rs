@@ -52,6 +52,32 @@ impl BodyId {
             BodyId::Deimos => 6.2,
         }
     }
+
+    pub const fn min_visible_radius_px(self) -> f64 {
+        match self {
+            BodyId::Sun => 16.0,
+            BodyId::Mercury => 3.0,
+            BodyId::Venus => 5.0,
+            BodyId::Earth => 7.0,
+            BodyId::Moon => 4.0,
+            BodyId::Mars => 6.0,
+            BodyId::Phobos => 2.0,
+            BodyId::Deimos => 2.0,
+        }
+    }
+
+    pub const fn color_rgb(self) -> (u8, u8, u8) {
+        match self {
+            BodyId::Sun => (255, 191, 0),
+            BodyId::Mercury => (150, 150, 150),
+            BodyId::Venus => (209, 160, 110),
+            BodyId::Earth => (85, 140, 255),
+            BodyId::Moon => (190, 190, 200),
+            BodyId::Mars => (201, 102, 70),
+            BodyId::Phobos => (138, 126, 116),
+            BodyId::Deimos => (168, 160, 146),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

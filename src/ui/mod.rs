@@ -6,6 +6,8 @@ use std::rc::Rc;
 
 slint::include_modules!();
 
+const AUTO_STEP_DAYS: f64 = 0.25;
+
 pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> {
     let ui = MainWindow::new()?;
     let app_state = Rc::new(RefCell::new(AppState::new(day_index)));
@@ -56,7 +58,7 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
     ui.on_auto_tick(move || {
         if state_tick.borrow().is_auto_play() {
             let mut state = state_tick.borrow_mut();
-            state.advance_auto_step(0.25);
+            state.advance_auto_step(AUTO_STEP_DAYS);
             let current = state.date_text();
             if let Some(ui) = weak_tick.upgrade() {
                 ui.set_date_text(current.into());

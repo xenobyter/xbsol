@@ -1,7 +1,15 @@
-use crate::model::EphemerisDayIndex;
+use crate::model::{BodyId, EphemerisDayIndex, StateVector};
 
 const AU_KM: f64 = 149_597_870.7;
-const SUN_RADIUS_KM: f64 = 696_340.0;
+const DAY_PROGRESS_RESET: f64 = 0.0;
+const DAY_PROGRESS_THRESHOLD: f64 = 1.0;
+const CLIP_NEAR_AU: f64 = 0.01;
+const CLIP_FAR_AU: f64 = 12.0;
+const MIN_ASPECT: f64 = 1e-6;
+const NDC_TO_PIXEL_SCALE: f64 = 0.5;
+const BODY_RADIUS_SCALE_PX: f64 = 260_000.0;
+const MIN_DEPTH_FOR_RADIUS: f64 = 0.2;
+const MAX_VISIBLE_RADIUS_PX: f64 = 70.0;
 
 #[derive(Debug, Clone)]
 pub struct RenderBody {
@@ -31,19 +39,40 @@ impl Default for CameraState {
         Self {
             // Diagonal, etwas weiter entfernter Blick auf das innere Sonnensystem,
             // damit Sonne, Merkur, Venus und Erde gut gleichzeitig sichtbar sind.
-            azimuth_deg: 135.0,
-            elevation_deg: 22.0,
-            distance_au: 4.5,
-            fov_deg: 50.0,
+            azimuth_deg: DEFAULT_AZIMUTH_DEG,
+            elevation_deg: DEFAULT_ELEVATION_DEG,
+            distance_au: DEFAULT_DISTANCE_AU,
+            fov_deg: DEFAULT_FOV_DEG,
         }
     }
 }
+
+const DEFAULT_AZIMUTH_DEG: f32 = 135.0;
+const DEFAULT_ELEVATION_DEG: f32 = 22.0;
+const DEFAULT_DISTANCE_AU: f32 = 4.5;
+const DEFAULT_FOV_DEG: f32 = 50.0;
 
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
     x: f64,
     y: f64,
     z: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CameraBasis {
+    camera_pos: Vec3,
+    forward: Vec3,
+    right: Vec3,
+    up: Vec3,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ProjectionParams {
+    near: f64,
+    far: f64,
+    tan_half_fov: f64,
+    aspect: f64,
 }
 
 impl Vec3 {
@@ -115,7 +144,7 @@ impl AppState {
             day_index,
             camera: CameraState::default(),
             auto_play: false,
-            current_day_progress: 0.0,
+            current_day_progress: DAY_PROGRESS_RESET,
         }
     }
 
@@ -127,12 +156,12 @@ impl AppState {
     }
 
     pub fn prev_day(&mut self) {
-        self.current_day_progress = 0.0;
+        self.current_day_progress = DAY_PROGRESS_RESET;
         let _ = self.day_index.prev_day();
     }
 
     pub fn next_day(&mut self) {
-        self.current_day_progress = 0.0;
+        self.current_day_progress = DAY_PROGRESS_RESET;
         let _ = self.day_index.next_day();
     }
 
@@ -150,12 +179,12 @@ impl AppState {
         }
 
         self.current_day_progress += dt_days;
-        while self.current_day_progress >= 1.0 {
+        while self.current_day_progress >= DAY_PROGRESS_THRESHOLD {
             if self.day_index.current_day_idx + 1 < self.day_index.days.len() {
                 self.day_index.current_day_idx += 1;
-                self.current_day_progress -= 1.0;
+                self.current_day_progress -= DAY_PROGRESS_THRESHOLD;
             } else {
-                self.current_day_progress = 0.0;
+                self.current_day_progress = DAY_PROGRESS_RESET;
                 break;
             }
         }
@@ -165,11 +194,11 @@ impl AppState {
         self.camera
     }
 
-    fn interpolate_body_state(current: Option<&crate::model::StateVector>, next: Option<&crate::model::StateVector>, alpha: f64) -> Option<crate::model::StateVector> {
+    fn interpolate_body_state(current: Option<&StateVector>, next: Option<&StateVector>, alpha: f64) -> Option<StateVector> {
         match (current, next) {
             (Some(cur), Some(nxt)) => {
                 let t = alpha.clamp(0.0, 1.0);
-                Some(crate::model::StateVector {
+                Some(StateVector {
                     epoch: cur.epoch,
                     x_km: cur.x_km + (nxt.x_km - cur.x_km) * t,
                     y_km: cur.y_km + (nxt.y_km - cur.y_km) * t,
@@ -185,16 +214,17 @@ impl AppState {
         }
     }
 
-    pub fn build_scene_frame(&self, width_px: f32, height_px: f32) -> SceneFrame {
-        let Some(day) = self.day_index.current_day() else {
-            return SceneFrame { bodies: Vec::new() };
-        };
+    fn projection_params(camera: CameraState, width_px: f32, height_px: f32) -> ProjectionParams {
+        let fov = (camera.fov_deg as f64).to_radians();
+        ProjectionParams {
+            near: CLIP_NEAR_AU,
+            far: CLIP_FAR_AU,
+            tan_half_fov: (fov * 0.5).tan(),
+            aspect: (width_px as f64 / height_px as f64).max(MIN_ASPECT),
+        }
+    }
 
-        let current_idx = self.day_index.current_day_idx;
-        let next_day = self.day_index.days.get(current_idx + 1);
-        let alpha = self.current_day_progress.clamp(0.0, 1.0);
-
-        let camera = self.camera;
+    fn camera_basis(camera: CameraState) -> CameraBasis {
         let az = (camera.azimuth_deg as f64).to_radians();
         let el = (camera.elevation_deg as f64).to_radians();
         let distance = camera.distance_au as f64;
@@ -205,116 +235,108 @@ impl AppState {
             y: distance * el.cos() * az.sin(),
             z: distance * el.sin(),
         };
-        let forward = (target - camera_pos).normalize().unwrap_or(Vec3 {
-            x: 0.0,
-            y: 0.0,
-            z: -1.0,
-        });
 
-        let world_up = Vec3 {
-            x: 0.0,
-            y: 0.0,
-            z: 1.0,
-        };
-        let right = forward.cross(world_up).normalize().unwrap_or(Vec3 {
-            x: 1.0,
-            y: 0.0,
-            z: 0.0,
-        });
+        let forward = (target - camera_pos).normalize().unwrap_or(Vec3 { x: 0.0, y: 0.0, z: -1.0 });
+        let world_up = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
+        let right = forward.cross(world_up).normalize().unwrap_or(Vec3 { x: 1.0, y: 0.0, z: 0.0 });
         let up = right.cross(forward).normalize().unwrap_or(world_up);
 
-        let near = 0.01_f64;
-        let far = 12.0_f64;
-        let fov = (camera.fov_deg as f64).to_radians();
-        let tan_half_fov = (fov * 0.5).tan();
-        let aspect = (width_px as f64 / height_px as f64).max(1e-6);
+        CameraBasis {
+            camera_pos,
+            forward,
+            right,
+            up,
+        }
+    }
 
-        let mut projected = Vec::new();
+    fn body_point_au(body_id: BodyId, state: &StateVector) -> Vec3 {
+        match body_id {
+            BodyId::Sun => Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+            BodyId::Mercury | BodyId::Venus | BodyId::Earth | BodyId::Moon | BodyId::Mars | BodyId::Phobos | BodyId::Deimos => Vec3 {
+                x: state.x_km / AU_KM,
+                y: state.y_km / AU_KM,
+                z: state.z_km / AU_KM,
+            },
+        }
+    }
+
+    fn world_bodies_for_frame(&self, day: &crate::model::DaySnapshot, alpha: f64) -> Vec<(BodyId, Vec3)> {
+        let next_day = self.day_index.days.get(self.day_index.current_day_idx + 1);
         let mut world_bodies = Vec::new();
 
         let body_ids: Vec<_> = day.by_body.keys().copied().collect();
         for &body_id in &body_ids {
             let current_state = day.by_body.get(&body_id);
             let next_state = next_day.and_then(|d| d.by_body.get(&body_id));
-            let interp = Self::interpolate_body_state(current_state, next_state, alpha);
-
-            let Some(state) = interp else {
+            let Some(state) = Self::interpolate_body_state(current_state, next_state, alpha) else {
                 continue;
             };
 
-            let point = match body_id {
-                crate::model::BodyId::Sun => Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-                crate::model::BodyId::Mercury
-                | crate::model::BodyId::Venus
-                | crate::model::BodyId::Earth
-                | crate::model::BodyId::Moon
-                | crate::model::BodyId::Mars
-                | crate::model::BodyId::Phobos
-                | crate::model::BodyId::Deimos => Vec3 {
-                    x: state.x_km / AU_KM,
-                    y: state.y_km / AU_KM,
-                    z: state.z_km / AU_KM,
-                },
-            };
-
-            world_bodies.push((body_id, point));
+            world_bodies.push((body_id, Self::body_point_au(body_id, &state)));
         }
 
+        world_bodies
+    }
+
+    fn project_body(
+        body_id: BodyId,
+        point: Vec3,
+        basis: CameraBasis,
+        params: ProjectionParams,
+        width_px: f32,
+        height_px: f32,
+    ) -> Option<RenderBody> {
+        let rel = point - basis.camera_pos;
+        let cam_x = rel.dot(basis.right);
+        let cam_y = rel.dot(basis.up);
+        let cam_z = rel.dot(basis.forward);
+
+        if cam_z <= params.near || cam_z >= params.far {
+            return None;
+        }
+
+        let x_ndc = cam_x / (cam_z * params.tan_half_fov * params.aspect);
+        let y_ndc = cam_y / (cam_z * params.tan_half_fov);
+
+        if !x_ndc.is_finite() || !y_ndc.is_finite() {
+            return None;
+        }
+
+        let x_px = ((x_ndc * NDC_TO_PIXEL_SCALE + NDC_TO_PIXEL_SCALE) * width_px as f64) as f32;
+        let y_px = ((NDC_TO_PIXEL_SCALE - y_ndc * NDC_TO_PIXEL_SCALE) * height_px as f64) as f32;
+
+        let radius_au = body_id.radius_km() / AU_KM;
+        let base_radius_px = (radius_au * BODY_RADIUS_SCALE_PX) / cam_z.max(MIN_DEPTH_FOR_RADIUS);
+        let min_visible_px = body_id.min_visible_radius_px();
+        let radius_px = base_radius_px.clamp(min_visible_px, MAX_VISIBLE_RADIUS_PX) as f32;
+
+        Some(RenderBody {
+            name: body_id.name().to_string(),
+            x_px,
+            y_px,
+            radius_px,
+            depth: cam_z as f32,
+            color_rgb: body_id.color_rgb(),
+        })
+    }
+
+    pub fn build_scene_frame(&self, width_px: f32, height_px: f32) -> SceneFrame {
+        let Some(day) = self.day_index.current_day() else {
+            return SceneFrame { bodies: Vec::new() };
+        };
+
+        let alpha = self.current_day_progress.clamp(0.0, 1.0);
+
+        let basis = Self::camera_basis(self.camera);
+        let params = Self::projection_params(self.camera, width_px, height_px);
+        let world_bodies = self.world_bodies_for_frame(day, alpha);
+
+        let mut projected = Vec::new();
+
         for (body_id, point) in world_bodies {
-            let rel = point - camera_pos;
-            let cam_x = rel.dot(right);
-            let cam_y = rel.dot(up);
-            let cam_z = rel.dot(forward);
-
-            if cam_z <= near || cam_z >= far {
-                continue;
+            if let Some(render_body) = Self::project_body(body_id, point, basis, params, width_px, height_px) {
+                projected.push(render_body);
             }
-
-            let x_ndc = cam_x / (cam_z * tan_half_fov * aspect);
-            let y_ndc = cam_y / (cam_z * tan_half_fov);
-
-            if !x_ndc.is_finite() || !y_ndc.is_finite() {
-                continue;
-            }
-
-            let x_px = ((x_ndc * 0.5 + 0.5) * width_px as f64) as f32;
-            let y_px = ((0.5 - y_ndc * 0.5) * height_px as f64) as f32;
-
-            let radius_au = body_id.radius_km() / AU_KM;
-            let base_radius_px = (radius_au * 260_000.0) / cam_z.max(0.2);
-            let min_visible_px = match body_id.name() {
-                "Sun" => 16.0,
-                "Mercury" => 3.0,
-                "Venus" => 5.0,
-                "Earth" => 7.0,
-                "Moon" => 4.0,
-                "Mars" => 6.0,
-                "Phobos" => 2.0,
-                "Deimos" => 2.0,
-                _ => 4.0,
-            };
-            let base_radius_px = base_radius_px.clamp(min_visible_px, 70.0) as f32;
-
-            let color = match body_id.name() {
-                "Sun" => (255, 191, 0),
-                "Mercury" => (150, 150, 150),
-                "Venus" => (209, 160, 110),
-                "Earth" => (85, 140, 255),
-                "Moon" => (190, 190, 200),
-                "Mars" => (201, 102, 70),
-                "Phobos" => (138, 126, 116),
-                "Deimos" => (168, 160, 146),
-                _ => (220, 220, 220),
-            };
-
-            projected.push(RenderBody {
-                name: body_id.name().to_string(),
-                x_px,
-                y_px,
-                radius_px: base_radius_px,
-                depth: cam_z as f32,
-                color_rgb: color,
-            });
         }
 
         projected.sort_by(|a, b| b.depth.partial_cmp(&a.depth).unwrap_or(std::cmp::Ordering::Equal));

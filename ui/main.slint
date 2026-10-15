@@ -10,8 +10,18 @@ struct BodySprite {
 
 export component MainWindow inherits Window {
     title: "xbsol";
-    width: 960px;
-    height: 700px;
+    width: window_width;
+    height: window_height;
+
+    private property <length> window_width: 960px;
+    private property <length> window_height: 700px;
+    private property <duration> auto_tick_interval: 50ms;
+    private property <length> layout_padding: 16px;
+    private property <length> layout_spacing: 10px;
+    private property <length> scene_min_height: 520px;
+    private property <color> scene_background: #0a0f1a;
+    private property <color> scene_border_color: #243752;
+    private property <length> scene_border_width: 1px;
 
     in-out property <string> date_text: "No data";
     in-out property <[BodySprite]> body_sprites: [];
@@ -31,7 +41,7 @@ export component MainWindow inherits Window {
 
     Timer {
         running: root.auto_play;
-        interval: 50ms;
+        interval: root.auto_tick_interval;
         triggered => {
             root.auto_tick();
             if (root.auto_play) {
@@ -44,8 +54,8 @@ export component MainWindow inherits Window {
     in-out property <bool> auto_play: false;
 
     VerticalBox {
-        padding: 16px;
-        spacing: 10px;
+        padding: root.layout_padding;
+        spacing: root.layout_spacing;
 
         Text {
             text: root.date_text;
@@ -56,10 +66,10 @@ export component MainWindow inherits Window {
         scene := Rectangle {
             horizontal-stretch: 1;
             vertical-stretch: 1;
-            min-height: 520px;
-            background: #0a0f1a;
-            border-color: #243752;
-            border-width: 1px;
+            min-height: root.scene_min_height;
+            background: root.scene_background;
+            border-color: root.scene_border_color;
+            border-width: root.scene_border_width;
 
             for body[i] in root.body_sprites : Rectangle {
                 width: body.radius_px * 2px;

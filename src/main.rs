@@ -5,6 +5,8 @@ mod ui;
 use horizon::get_ephemerides;
 use model::{BODIES, EphemerisTable};
 
+const EXIT_RUNTIME_ERROR: i32 = 1;
+
 fn main() {
     env_logger::init();
 
@@ -25,7 +27,7 @@ fn main() {
             }
             Err(error) => {
                 eprintln!("Failed to fetch Horizon data for {}: {error}", body.body_id.name());
-                std::process::exit(1);
+                std::process::exit(EXIT_RUNTIME_ERROR);
             }
         }
     }
@@ -37,6 +39,6 @@ fn main() {
 
     if let Err(error) = ui::run_ui(day_index) {
         eprintln!("Failed to run UI: {error}");
-        std::process::exit(1);
+        std::process::exit(EXIT_RUNTIME_ERROR);
     }
 }
