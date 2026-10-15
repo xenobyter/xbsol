@@ -10,11 +10,8 @@ struct BodySprite {
 
 export component MainWindow inherits Window {
     title: "xbsol";
-    width: window_width;
-    height: window_height;
-
-    private property <length> window_width: 960px;
-    private property <length> window_height: 700px;
+    preferred-width: 960px;
+    preferred-height: 700px;
     private property <duration> auto_tick_interval: 50ms;
     private property <length> layout_padding: 16px;
     private property <length> layout_spacing: 10px;
@@ -38,10 +35,19 @@ export component MainWindow inherits Window {
     callback next_day();
     callback toggle_auto_play();
     callback auto_tick();
+    callback scene_resized(viewport_width_px: float, viewport_height_px: float);
     callback orbit_camera(delta_x_px: float, delta_y_px: float);
     callback pan_camera(delta_x_px: float, delta_y_px: float, viewport_width_px: float, viewport_height_px: float);
     callback zoom_camera(delta_steps: float);
     callback camera_key(action: string);
+
+    changed scene_width => {
+        root.scene_resized(root.scene_width, root.scene_height);
+    }
+
+    changed scene_height => {
+        root.scene_resized(root.scene_width, root.scene_height);
+    }
 
     Timer {
         running: root.auto_play;
@@ -58,6 +64,9 @@ export component MainWindow inherits Window {
     in-out property <bool> auto_play: false;
 
     input_scope := FocusScope {
+        width: 100%;
+        height: 100%;
+
         key-pressed(event) => {
             if (event.text == "a" || event.text == "A") {
                 root.camera_key("pan_left");
@@ -95,6 +104,8 @@ export component MainWindow inherits Window {
         }
 
         VerticalBox {
+            width: 100%;
+            height: 100%;
             padding: root.layout_padding;
             spacing: root.layout_spacing;
 

@@ -67,6 +67,14 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
         }
     });
 
+    let weak_resize = ui.as_weak();
+    let state_resize = Rc::clone(&app_state);
+    ui.on_scene_resized(move |_viewport_width_px, _viewport_height_px| {
+        if let Some(ui) = weak_resize.upgrade() {
+            refresh_scene(&ui, &state_resize.borrow());
+        }
+    });
+
     let weak_orbit = ui.as_weak();
     let state_orbit = Rc::clone(&app_state);
     ui.on_orbit_camera(move |delta_x_px, delta_y_px| {
