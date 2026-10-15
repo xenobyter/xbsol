@@ -30,11 +30,13 @@ export component MainWindow inherits Window {
     in-out property <float> camera_elevation_deg: 0;
     in-out property <float> camera_distance_au: 0;
     in-out property <float> camera_fov_deg: 0;
+    in-out property <string> selected_center_name: "Sun";
 
     callback prev_day();
     callback next_day();
     callback toggle_auto_play();
     callback auto_tick();
+    callback select_center(name: string);
     callback scene_resized(viewport_width_px: float, viewport_height_px: float);
     callback orbit_camera(delta_x_px: float, delta_y_px: float);
     callback pan_camera(delta_x_px: float, delta_y_px: float, viewport_width_px: float, viewport_height_px: float);
@@ -113,6 +115,34 @@ export component MainWindow inherits Window {
             text: root.date_text;
             horizontal-alignment: center;
             font-size: 20px;
+        }
+
+        HorizontalBox {
+            spacing: 8px;
+            Button {
+                text: "Sun";
+                clicked => { root.selected_center_name = "Sun"; root.select_center("Sun"); }
+            }
+            Button {
+                text: "Mercury";
+                clicked => { root.selected_center_name = "Mercury"; root.select_center("Mercury"); }
+            }
+            Button {
+                text: "Venus";
+                clicked => { root.selected_center_name = "Venus"; root.select_center("Venus"); }
+            }
+            Button {
+                text: "Earth";
+                clicked => { root.selected_center_name = "Earth"; root.select_center("Earth"); }
+            }
+            Button {
+                text: "Moon";
+                clicked => { root.selected_center_name = "Moon"; root.select_center("Moon"); }
+            }
+            Button {
+                text: "Mars";
+                clicked => { root.selected_center_name = "Mars"; root.select_center("Mars"); }
+            }
         }
 
         scene := Rectangle {

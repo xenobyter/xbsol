@@ -3,7 +3,7 @@ use crate::model::{BodyId, EphemerisDayIndex, StateVector};
 const AU_KM: f64 = 149_597_870.7;
 const DAY_PROGRESS_RESET: f64 = 0.0;
 const DAY_PROGRESS_THRESHOLD: f64 = 1.0;
-const CLIP_NEAR_AU: f64 = 0.01;
+const CLIP_NEAR_AU: f64 = 0.001;
 const CLIP_FAR_AU: f64 = 12.0;
 const MIN_ASPECT: f64 = 1e-6;
 const NDC_TO_PIXEL_SCALE: f64 = 0.5;
@@ -53,7 +53,7 @@ const DEFAULT_DISTANCE_AU: f32 = 4.5;
 const DEFAULT_FOV_DEG: f32 = 50.0;
 const MIN_ELEVATION_DEG: f32 = -85.0;
 const MAX_ELEVATION_DEG: f32 = 85.0;
-const MIN_DISTANCE_AU: f32 = 0.2;
+const MIN_DISTANCE_AU: f32 = 0.002;
 const MAX_DISTANCE_AU: f32 = 12.0;
 const ORBIT_DEG_PER_PIXEL: f32 = 0.25;
 const ZOOM_FACTOR_PER_STEP: f32 = 1.12;
@@ -153,6 +153,7 @@ pub struct AppState {
     camera_target_au: Vec3,
     auto_play: bool,
     current_day_progress: f64,
+    selected_center: BodyId,
 }
 
 impl AppState {
@@ -163,7 +164,21 @@ impl AppState {
             camera_target_au: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
             auto_play: false,
             current_day_progress: DAY_PROGRESS_RESET,
+            selected_center: BodyId::Sun,
         }
+    }
+
+    pub fn selected_center(&self) -> BodyId {
+        self.selected_center
+    }
+
+    pub fn set_center(&mut self, body_id: BodyId) {
+        if self.selected_center == body_id {
+            return;
+        }
+
+        self.selected_center = body_id;
+        self.camera_target_au = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
     }
 
     pub fn date_text(&self) -> String {
@@ -268,6 +283,21 @@ impl AppState {
         }
     }
 
+    fn selected_center_point_au(&self, day: &crate::model::DaySnapshot, alpha: f64) -> Vec3 {
+        if self.selected_center == BodyId::Sun {
+            return Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+        }
+
+        let next_day = self.day_index.days.get(self.day_index.current_day_idx + 1);
+        let current_state = day.by_body.get(&self.selected_center);
+        let next_state = next_day.and_then(|d| d.by_body.get(&self.selected_center));
+        let Some(state) = Self::interpolate_body_state(current_state, next_state, alpha) else {
+            return Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+        };
+
+        Self::body_point_au(self.selected_center, &state)
+    }
+
     fn projection_params(camera: CameraState, width_px: f32, height_px: f32) -> ProjectionParams {
         let fov = (camera.fov_deg as f64).to_radians();
         ProjectionParams {
@@ -316,6 +346,7 @@ impl AppState {
 
     fn world_bodies_for_frame(&self, day: &crate::model::DaySnapshot, alpha: f64) -> Vec<(BodyId, Vec3)> {
         let next_day = self.day_index.days.get(self.day_index.current_day_idx + 1);
+        let center_point = self.selected_center_point_au(day, alpha);
         let mut world_bodies = Vec::new();
 
         let body_ids: Vec<_> = day.by_body.keys().copied().collect();
@@ -326,7 +357,8 @@ impl AppState {
                 continue;
             };
 
-            world_bodies.push((body_id, Self::body_point_au(body_id, &state)));
+            let absolute_point = Self::body_point_au(body_id, &state);
+            world_bodies.push((body_id, absolute_point - center_point));
         }
 
         world_bodies

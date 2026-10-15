@@ -20,6 +20,7 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
         ui.set_camera_elevation_deg(camera.elevation_deg);
         ui.set_camera_distance_au(camera.distance_au);
         ui.set_camera_fov_deg(camera.fov_deg);
+        ui.set_selected_center_name(state.selected_center().name().to_string().into());
     }
 
     refresh_scene(&ui, &app_state.borrow());
@@ -50,6 +51,29 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
         state_auto.borrow_mut().toggle_auto_play();
         if let Some(ui) = weak_auto.upgrade() {
             ui.set_auto_play(state_auto.borrow().is_auto_play());
+        }
+    });
+
+    let weak_select_center = ui.as_weak();
+    let state_center = Rc::clone(&app_state);
+    ui.on_select_center(move |name| {
+        let mut state = state_center.borrow_mut();
+        let body_name = name.trim();
+        let target = match body_name {
+            "Sun" => crate::model::BodyId::Sun,
+            "Mercury" => crate::model::BodyId::Mercury,
+            "Venus" => crate::model::BodyId::Venus,
+            "Earth" => crate::model::BodyId::Earth,
+            "Moon" => crate::model::BodyId::Moon,
+            "Mars" => crate::model::BodyId::Mars,
+            _ => crate::model::BodyId::Sun,
+        };
+
+        state.set_center(target);
+
+        if let Some(ui) = weak_select_center.upgrade() {
+            ui.set_selected_center_name(target.name().to_string().into());
+            refresh_scene(&ui, &state);
         }
     });
 
