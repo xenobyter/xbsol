@@ -38,6 +38,10 @@ export component MainWindow inherits Window {
     callback next_day();
     callback toggle_auto_play();
     callback auto_tick();
+    callback orbit_camera(delta_x_px: float, delta_y_px: float);
+    callback pan_camera(delta_x_px: float, delta_y_px: float, viewport_width_px: float, viewport_height_px: float);
+    callback zoom_camera(delta_steps: float);
+    callback camera_key(action: string);
 
     Timer {
         running: root.auto_play;
@@ -53,9 +57,46 @@ export component MainWindow inherits Window {
 
     in-out property <bool> auto_play: false;
 
-    VerticalBox {
-        padding: root.layout_padding;
-        spacing: root.layout_spacing;
+    input_scope := FocusScope {
+        key-pressed(event) => {
+            if (event.text == "a" || event.text == "A") {
+                root.camera_key("pan_left");
+                accept;
+            } else if (event.text == "d" || event.text == "D") {
+                root.camera_key("pan_right");
+                accept;
+            } else if (event.text == "w" || event.text == "W") {
+                root.camera_key("pan_up");
+                accept;
+            } else if (event.text == "s" || event.text == "S") {
+                root.camera_key("pan_down");
+                accept;
+            } else if (event.text == "j" || event.text == "J") {
+                root.camera_key("orbit_left");
+                accept;
+            } else if (event.text == "l" || event.text == "L") {
+                root.camera_key("orbit_right");
+                accept;
+            } else if (event.text == "i" || event.text == "I") {
+                root.camera_key("orbit_up");
+                accept;
+            } else if (event.text == "k" || event.text == "K") {
+                root.camera_key("orbit_down");
+                accept;
+            } else if (event.text == "+" || event.text == "=") {
+                root.camera_key("zoom_in");
+                accept;
+            } else if (event.text == "-") {
+                root.camera_key("zoom_out");
+                accept;
+            } else {
+                reject;
+            }
+        }
+
+        VerticalBox {
+            padding: root.layout_padding;
+            spacing: root.layout_spacing;
 
         Text {
             text: root.date_text;
@@ -71,6 +112,55 @@ export component MainWindow inherits Window {
             border-color: root.scene_border_color;
             border-width: root.scene_border_width;
 
+            property <bool> drag_active: false;
+            property <bool> drag_pan: false;
+            property <float> drag_last_x: 0;
+            property <float> drag_last_y: 0;
+
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+
+                pointer-event(event) => {
+                    if (event.kind == PointerEventKind.down) {
+                        scene.drag_active = true;
+                        scene.drag_pan = event.button == PointerEventButton.right;
+                        scene.drag_last_x = self.mouse-x / 1px;
+                        scene.drag_last_y = self.mouse-y / 1px;
+                    } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                        scene.drag_active = false;
+                        scene.drag_pan = false;
+                    }
+                }
+
+                clicked => {
+                    input_scope.focus();
+                }
+
+                moved => {
+                    if (scene.drag_active) {
+                        let current_x = self.mouse-x / 1px;
+                        let current_y = self.mouse-y / 1px;
+                        let delta_x = current_x - scene.drag_last_x;
+                        let delta_y = current_y - scene.drag_last_y;
+                        if (scene.drag_pan) {
+                            root.pan_camera(delta_x, delta_y, root.scene_width, root.scene_height);
+                        } else {
+                            root.orbit_camera(delta_x, delta_y);
+                        }
+                        scene.drag_last_x = current_x;
+                        scene.drag_last_y = current_y;
+                    } else {
+                        scene.drag_active = false;
+                    }
+                }
+
+                scroll-event(event) => {
+                    root.zoom_camera(event.delta-y / 120px);
+                    accept;
+                }
+            }
+
             for body[i] in root.body_sprites : Rectangle {
                 width: body.radius_px * 2px;
                 height: body.radius_px * 2px;
@@ -81,24 +171,25 @@ export component MainWindow inherits Window {
             }
         }
 
-        HorizontalBox {
-            spacing: 12px;
+            HorizontalBox {
+                spacing: 12px;
 
-            Button {
-                text: "← Prev day";
-                clicked => { root.prev_day(); }
-            }
+                Button {
+                    text: "← Prev day";
+                    clicked => { root.prev_day(); }
+                }
 
-            Button {
-                text: "Next day →";
-                clicked => { root.next_day(); }
-            }
+                Button {
+                    text: "Next day →";
+                    clicked => { root.next_day(); }
+                }
 
-            Button {
-                text: root.auto_play ? "Stop" : "Auto";
-                clicked => {
-                    root.auto_play = !root.auto_play;
-                    root.toggle_auto_play();
+                Button {
+                    text: root.auto_play ? "Stop" : "Auto";
+                    clicked => {
+                        root.auto_play = !root.auto_play;
+                        root.toggle_auto_play();
+                    }
                 }
             }
         }

@@ -37,8 +37,8 @@ pub struct CameraState {
 impl Default for CameraState {
     fn default() -> Self {
         Self {
-            // Diagonal, etwas weiter entfernter Blick auf das innere Sonnensystem,
-            // damit Sonne, Merkur, Venus und Erde gut gleichzeitig sichtbar sind.
+            // Start mit deutlich erhöhter Perspektive auf die Ekliptik,
+            // damit die Planetenebene "von oben" besser lesbar ist.
             azimuth_deg: DEFAULT_AZIMUTH_DEG,
             elevation_deg: DEFAULT_ELEVATION_DEG,
             distance_au: DEFAULT_DISTANCE_AU,
@@ -48,9 +48,15 @@ impl Default for CameraState {
 }
 
 const DEFAULT_AZIMUTH_DEG: f32 = 135.0;
-const DEFAULT_ELEVATION_DEG: f32 = 22.0;
+const DEFAULT_ELEVATION_DEG: f32 = 58.0;
 const DEFAULT_DISTANCE_AU: f32 = 4.5;
 const DEFAULT_FOV_DEG: f32 = 50.0;
+const MIN_ELEVATION_DEG: f32 = -85.0;
+const MAX_ELEVATION_DEG: f32 = 85.0;
+const MIN_DISTANCE_AU: f32 = 0.2;
+const MAX_DISTANCE_AU: f32 = 12.0;
+const ORBIT_DEG_PER_PIXEL: f32 = 0.25;
+const ZOOM_FACTOR_PER_STEP: f32 = 1.12;
 
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
@@ -131,9 +137,20 @@ impl Sub for Vec3 {
     }
 }
 
+impl Vec3 {
+    fn scale(self, s: f64) -> Vec3 {
+        Vec3 {
+            x: self.x * s,
+            y: self.y * s,
+            z: self.z * s,
+        }
+    }
+}
+
 pub struct AppState {
     day_index: EphemerisDayIndex,
     camera: CameraState,
+    camera_target_au: Vec3,
     auto_play: bool,
     current_day_progress: f64,
 }
@@ -143,6 +160,7 @@ impl AppState {
         Self {
             day_index,
             camera: CameraState::default(),
+            camera_target_au: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
             auto_play: false,
             current_day_progress: DAY_PROGRESS_RESET,
         }
@@ -194,6 +212,42 @@ impl AppState {
         self.camera
     }
 
+    pub fn orbit_by_pixels(&mut self, delta_x_px: f32, delta_y_px: f32) {
+        self.orbit_by_degrees(-delta_x_px * ORBIT_DEG_PER_PIXEL, delta_y_px * ORBIT_DEG_PER_PIXEL);
+    }
+
+    pub fn orbit_by_degrees(&mut self, delta_azimuth_deg: f32, delta_elevation_deg: f32) {
+        self.camera.azimuth_deg += delta_azimuth_deg;
+        self.camera.elevation_deg = (self.camera.elevation_deg + delta_elevation_deg)
+            .clamp(MIN_ELEVATION_DEG, MAX_ELEVATION_DEG);
+    }
+
+    pub fn zoom_by_steps(&mut self, steps: f32) {
+        if steps.abs() <= f32::EPSILON {
+            return;
+        }
+
+        let factor = ZOOM_FACTOR_PER_STEP.powf(-steps);
+        self.camera.distance_au = (self.camera.distance_au * factor).clamp(MIN_DISTANCE_AU, MAX_DISTANCE_AU);
+    }
+
+    pub fn pan_by_pixels(&mut self, delta_x_px: f32, delta_y_px: f32, viewport_width_px: f32, viewport_height_px: f32) {
+        let width_px = viewport_width_px.max(1.0) as f64;
+        let height_px = viewport_height_px.max(1.0) as f64;
+        let aspect = (width_px / height_px).max(MIN_ASPECT);
+        let tan_half_fov = ((self.camera.fov_deg as f64).to_radians() * 0.5).tan();
+        let half_height_world = self.camera.distance_au as f64 * tan_half_fov;
+        let half_width_world = half_height_world * aspect;
+
+        let world_per_px_x = (2.0 * half_width_world) / width_px;
+        let world_per_px_y = (2.0 * half_height_world) / height_px;
+
+        let basis = Self::camera_basis(self.camera, self.camera_target_au);
+        let delta_right = basis.right.scale(-(delta_x_px as f64) * world_per_px_x);
+        let delta_up = basis.up.scale((delta_y_px as f64) * world_per_px_y);
+        self.camera_target_au = self.camera_target_au + delta_right + delta_up;
+    }
+
     fn interpolate_body_state(current: Option<&StateVector>, next: Option<&StateVector>, alpha: f64) -> Option<StateVector> {
         match (current, next) {
             (Some(cur), Some(nxt)) => {
@@ -224,17 +278,17 @@ impl AppState {
         }
     }
 
-    fn camera_basis(camera: CameraState) -> CameraBasis {
+    fn camera_basis(camera: CameraState, target: Vec3) -> CameraBasis {
         let az = (camera.azimuth_deg as f64).to_radians();
         let el = (camera.elevation_deg as f64).to_radians();
         let distance = camera.distance_au as f64;
 
-        let target = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
-        let camera_pos = Vec3 {
+        let offset = Vec3 {
             x: distance * el.cos() * az.cos(),
             y: distance * el.cos() * az.sin(),
             z: distance * el.sin(),
         };
+        let camera_pos = target + offset;
 
         let forward = (target - camera_pos).normalize().unwrap_or(Vec3 { x: 0.0, y: 0.0, z: -1.0 });
         let world_up = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
@@ -327,7 +381,7 @@ impl AppState {
 
         let alpha = self.current_day_progress.clamp(0.0, 1.0);
 
-        let basis = Self::camera_basis(self.camera);
+        let basis = Self::camera_basis(self.camera, self.camera_target_au);
         let params = Self::projection_params(self.camera, width_px, height_px);
         let world_bodies = self.world_bodies_for_frame(day, alpha);
 

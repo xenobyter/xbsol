@@ -67,6 +67,81 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
         }
     });
 
+    let weak_orbit = ui.as_weak();
+    let state_orbit = Rc::clone(&app_state);
+    ui.on_orbit_camera(move |delta_x_px, delta_y_px| {
+        let mut state = state_orbit.borrow_mut();
+        state.orbit_by_pixels(delta_x_px, delta_y_px);
+
+        if let Some(ui) = weak_orbit.upgrade() {
+            let camera = state.camera();
+            ui.set_camera_azimuth_deg(camera.azimuth_deg);
+            ui.set_camera_elevation_deg(camera.elevation_deg);
+            ui.set_camera_distance_au(camera.distance_au);
+            ui.set_camera_fov_deg(camera.fov_deg);
+            refresh_scene(&ui, &state);
+        }
+    });
+
+    let weak_zoom = ui.as_weak();
+    let state_zoom = Rc::clone(&app_state);
+    ui.on_zoom_camera(move |delta_steps| {
+        let mut state = state_zoom.borrow_mut();
+        state.zoom_by_steps(delta_steps);
+
+        if let Some(ui) = weak_zoom.upgrade() {
+            let camera = state.camera();
+            ui.set_camera_azimuth_deg(camera.azimuth_deg);
+            ui.set_camera_elevation_deg(camera.elevation_deg);
+            ui.set_camera_distance_au(camera.distance_au);
+            ui.set_camera_fov_deg(camera.fov_deg);
+            refresh_scene(&ui, &state);
+        }
+    });
+
+    let weak_pan = ui.as_weak();
+    let state_pan = Rc::clone(&app_state);
+    ui.on_pan_camera(move |delta_x_px, delta_y_px, viewport_width_px, viewport_height_px| {
+        let mut state = state_pan.borrow_mut();
+        state.pan_by_pixels(delta_x_px, delta_y_px, viewport_width_px, viewport_height_px);
+
+        if let Some(ui) = weak_pan.upgrade() {
+            refresh_scene(&ui, &state);
+        }
+    });
+
+    let weak_key = ui.as_weak();
+    let state_key = Rc::clone(&app_state);
+    ui.on_camera_key(move |action| {
+        let mut state = state_key.borrow_mut();
+
+        if let Some(ui) = weak_key.upgrade() {
+            let width = ui.get_scene_width().max(1.0);
+            let height = ui.get_scene_height().max(1.0);
+
+            match action.as_str() {
+                "pan_left" => state.pan_by_pixels(-28.0, 0.0, width, height),
+                "pan_right" => state.pan_by_pixels(28.0, 0.0, width, height),
+                "pan_up" => state.pan_by_pixels(0.0, -28.0, width, height),
+                "pan_down" => state.pan_by_pixels(0.0, 28.0, width, height),
+                "orbit_left" => state.orbit_by_degrees(-2.5, 0.0),
+                "orbit_right" => state.orbit_by_degrees(2.5, 0.0),
+                "orbit_up" => state.orbit_by_degrees(0.0, -2.0),
+                "orbit_down" => state.orbit_by_degrees(0.0, 2.0),
+                "zoom_in" => state.zoom_by_steps(1.0),
+                "zoom_out" => state.zoom_by_steps(-1.0),
+                _ => {}
+            }
+
+            let camera = state.camera();
+            ui.set_camera_azimuth_deg(camera.azimuth_deg);
+            ui.set_camera_elevation_deg(camera.elevation_deg);
+            ui.set_camera_distance_au(camera.distance_au);
+            ui.set_camera_fov_deg(camera.fov_deg);
+            refresh_scene(&ui, &state);
+        }
+    });
+
     ui.run()
 }
 
