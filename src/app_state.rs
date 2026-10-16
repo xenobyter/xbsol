@@ -55,7 +55,10 @@ const VENUS_DISTANCE_AU: f32 = 1.2;
 const EARTH_DISTANCE_AU: f32 = 0.015;
 const MOON_DISTANCE_AU: f32 = 0.12;
 const MARS_DISTANCE_AU: f32 = 0.0015;
+const JUPITER_DISTANCE_AU: f32 = 0.02;
+const JUPITER_MOON_DISTANCE_AU: f32 = 0.008;
 const MARS_FOV_DEG: f32 = 35.0;
+const JUPITER_FOV_DEG: f32 = 40.0;
 const MIN_ELEVATION_DEG: f32 = -85.0;
 const MAX_ELEVATION_DEG: f32 = 85.0;
 const MIN_DISTANCE_AU: f32 = 0.0015;
@@ -172,6 +175,11 @@ impl AppState {
             BodyId::Earth => 42.0,
             BodyId::Moon => 14.0,
             BodyId::Mars => 24.0,
+            BodyId::Jupiter => 78.0,
+            BodyId::Io => 10.0,
+            BodyId::Europa => 10.0,
+            BodyId::Ganymede => 12.0,
+            BodyId::Callisto => 12.0,
             BodyId::Phobos => 4.0,
             BodyId::Deimos => 4.0,
         }
@@ -210,10 +218,13 @@ impl AppState {
             BodyId::Earth => EARTH_DISTANCE_AU,
             BodyId::Moon => MOON_DISTANCE_AU,
             BodyId::Mars => MARS_DISTANCE_AU,
+            BodyId::Jupiter => JUPITER_DISTANCE_AU,
+            BodyId::Io | BodyId::Europa | BodyId::Ganymede | BodyId::Callisto => JUPITER_MOON_DISTANCE_AU,
             BodyId::Phobos | BodyId::Deimos => MARS_DISTANCE_AU,
         };
 
         let fov_deg = match body_id {
+            BodyId::Jupiter | BodyId::Io | BodyId::Europa | BodyId::Ganymede | BodyId::Callisto => JUPITER_FOV_DEG,
             BodyId::Mars | BodyId::Phobos | BodyId::Deimos => MARS_FOV_DEG,
             _ => DEFAULT_FOV_DEG,
         };
@@ -382,7 +393,18 @@ impl AppState {
     fn body_point_au(body_id: BodyId, state: &StateVector) -> Vec3 {
         match body_id {
             BodyId::Sun => Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-            BodyId::Mercury | BodyId::Venus | BodyId::Earth | BodyId::Moon | BodyId::Mars | BodyId::Phobos | BodyId::Deimos => Vec3 {
+            BodyId::Mercury
+            | BodyId::Venus
+            | BodyId::Earth
+            | BodyId::Moon
+            | BodyId::Mars
+            | BodyId::Jupiter
+            | BodyId::Io
+            | BodyId::Europa
+            | BodyId::Ganymede
+            | BodyId::Callisto
+            | BodyId::Phobos
+            | BodyId::Deimos => Vec3 {
                 x: state.x_km / AU_KM,
                 y: state.y_km / AU_KM,
                 z: state.z_km / AU_KM,

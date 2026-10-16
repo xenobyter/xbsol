@@ -66,6 +66,11 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
             "Earth" => crate::model::BodyId::Earth,
             "Moon" => crate::model::BodyId::Moon,
             "Mars" => crate::model::BodyId::Mars,
+            "Jupiter" => crate::model::BodyId::Jupiter,
+            "Io" => crate::model::BodyId::Io,
+            "Europa" => crate::model::BodyId::Europa,
+            "Ganymede" => crate::model::BodyId::Ganymede,
+            "Callisto" => crate::model::BodyId::Callisto,
             _ => crate::model::BodyId::Sun,
         };
 
