@@ -9,7 +9,6 @@ const MIN_ASPECT: f64 = 1e-6;
 const NDC_TO_PIXEL_SCALE: f64 = 0.5;
 const BODY_RADIUS_SCALE_PX: f64 = 260_000.0;
 const MIN_DEPTH_FOR_RADIUS: f64 = 0.2;
-const MAX_VISIBLE_RADIUS_PX: f64 = 70.0;
 
 #[derive(Debug, Clone)]
 pub struct RenderBody {
@@ -63,6 +62,8 @@ const MIN_DISTANCE_AU: f32 = 0.0015;
 const MAX_DISTANCE_AU: f32 = 12.0;
 const ORBIT_DEG_PER_PIXEL: f32 = 0.25;
 const ZOOM_FACTOR_PER_STEP: f32 = 1.12;
+const MIN_RADIUS_ZOOM_SCALE: f64 = 0.35;
+const MAX_RADIUS_ZOOM_SCALE: f64 = 6.0;
 
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
@@ -163,6 +164,19 @@ pub struct AppState {
 }
 
 impl AppState {
+    fn max_visible_radius_px(body_id: BodyId) -> f64 {
+        match body_id {
+            BodyId::Sun => 180.0,
+            BodyId::Mercury => 14.0,
+            BodyId::Venus => 34.0,
+            BodyId::Earth => 42.0,
+            BodyId::Moon => 14.0,
+            BodyId::Mars => 24.0,
+            BodyId::Phobos => 4.0,
+            BodyId::Deimos => 4.0,
+        }
+    }
+
     pub fn new(day_index: EphemerisDayIndex) -> Self {
         Self {
             day_index,
@@ -331,9 +345,10 @@ impl AppState {
 
     fn projection_params(camera: CameraState, width_px: f32, height_px: f32) -> ProjectionParams {
         let fov = (camera.fov_deg as f64).to_radians();
+        let far = (camera.distance_au as f64 + 5.0).max(CLIP_FAR_AU);
         ProjectionParams {
             near: CLIP_NEAR_AU,
-            far: CLIP_FAR_AU,
+            far,
             tan_half_fov: (fov * 0.5).tan(),
             aspect: (width_px as f64 / height_px as f64).max(MIN_ASPECT),
         }
@@ -400,6 +415,7 @@ impl AppState {
         point: Vec3,
         basis: CameraBasis,
         params: ProjectionParams,
+        zoom_scale: f64,
         width_px: f32,
         height_px: f32,
     ) -> Option<RenderBody> {
@@ -423,9 +439,11 @@ impl AppState {
         let y_px = ((NDC_TO_PIXEL_SCALE - y_ndc * NDC_TO_PIXEL_SCALE) * height_px as f64) as f32;
 
         let radius_au = body_id.radius_km() / AU_KM;
-        let base_radius_px = (radius_au * BODY_RADIUS_SCALE_PX) / cam_z.max(MIN_DEPTH_FOR_RADIUS);
+        let zoom_scale = zoom_scale.clamp(MIN_RADIUS_ZOOM_SCALE, MAX_RADIUS_ZOOM_SCALE);
+        let base_radius_px = ((radius_au * BODY_RADIUS_SCALE_PX) / cam_z.max(MIN_DEPTH_FOR_RADIUS)) * zoom_scale;
         let min_visible_px = body_id.min_visible_radius_px();
-        let radius_px = base_radius_px.clamp(min_visible_px, MAX_VISIBLE_RADIUS_PX) as f32;
+        let max_visible_px = Self::max_visible_radius_px(body_id);
+        let radius_px = base_radius_px.clamp(min_visible_px, max_visible_px) as f32;
 
         Some(RenderBody {
             name: body_id.name().to_string(),
@@ -446,12 +464,13 @@ impl AppState {
 
         let basis = Self::camera_basis(self.camera, self.camera_target_au);
         let params = Self::projection_params(self.camera, width_px, height_px);
+        let zoom_scale = (DEFAULT_DISTANCE_AU as f64 / self.camera.distance_au as f64).clamp(MIN_RADIUS_ZOOM_SCALE, MAX_RADIUS_ZOOM_SCALE);
         let world_bodies = self.world_bodies_for_frame(day, alpha);
 
         let mut projected = Vec::new();
 
         for (body_id, point) in world_bodies {
-            if let Some(render_body) = Self::project_body(body_id, point, basis, params, width_px, height_px) {
+            if let Some(render_body) = Self::project_body(body_id, point, basis, params, zoom_scale, width_px, height_px) {
                 projected.push(render_body);
             }
         }
