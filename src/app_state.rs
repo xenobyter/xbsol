@@ -67,6 +67,9 @@ const ORBIT_DEG_PER_PIXEL: f32 = 0.25;
 const ZOOM_FACTOR_PER_STEP: f32 = 1.12;
 const MIN_RADIUS_ZOOM_SCALE: f64 = 0.35;
 const MAX_RADIUS_ZOOM_SCALE: f64 = 6.0;
+const AUTO_STEP_DAYS_MIN: f64 = 0.01;
+const AUTO_STEP_DAYS_MAX: f64 = 1.0;
+const AUTO_STEP_DAYS_DEFAULT: f64 = 0.25;
 
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
@@ -162,6 +165,7 @@ pub struct AppState {
     camera: CameraState,
     camera_target_au: Vec3,
     auto_play: bool,
+    auto_step_days: f64,
     current_day_progress: f64,
     selected_center: BodyId,
 }
@@ -191,9 +195,18 @@ impl AppState {
             camera: CameraState::default(),
             camera_target_au: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
             auto_play: false,
+            auto_step_days: AUTO_STEP_DAYS_DEFAULT,
             current_day_progress: DAY_PROGRESS_RESET,
             selected_center: BodyId::Sun,
         }
+    }
+
+    pub fn auto_step_days(&self) -> f64 {
+        self.auto_step_days
+    }
+
+    pub fn set_auto_step_days(&mut self, days: f64) {
+        self.auto_step_days = days.clamp(AUTO_STEP_DAYS_MIN, AUTO_STEP_DAYS_MAX);
     }
 
     pub fn selected_center(&self) -> BodyId {

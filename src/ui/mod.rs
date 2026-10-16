@@ -6,8 +6,6 @@ use std::rc::Rc;
 
 slint::include_modules!();
 
-const AUTO_STEP_DAYS: f64 = 0.25;
-
 pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> {
     let ui = MainWindow::new()?;
     let app_state = Rc::new(RefCell::new(AppState::new(day_index)));
@@ -21,6 +19,7 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
         ui.set_camera_distance_au(camera.distance_au);
         ui.set_camera_fov_deg(camera.fov_deg);
         ui.set_selected_center_name(state.selected_center().name().to_string().into());
+        ui.set_auto_step_days(state.auto_step_days() as f32);
     }
 
     refresh_scene(&ui, &app_state.borrow());
@@ -92,13 +91,19 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
     ui.on_auto_tick(move || {
         if state_tick.borrow().is_auto_play() {
             let mut state = state_tick.borrow_mut();
-            state.advance_auto_step(AUTO_STEP_DAYS);
+            let dt_days = state.auto_step_days();
+            state.advance_auto_step(dt_days);
             let current = state.date_text();
             if let Some(ui) = weak_tick.upgrade() {
                 ui.set_date_text(current.into());
                 refresh_scene(&ui, &state);
             }
         }
+    });
+
+    let state_step = Rc::clone(&app_state);
+    ui.on_set_auto_step_days(move |days| {
+        state_step.borrow_mut().set_auto_step_days(days as f64);
     });
 
     let weak_resize = ui.as_weak();

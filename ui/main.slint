@@ -1,4 +1,4 @@
-import { VerticalBox, HorizontalBox, Button, ComboBox } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, ComboBox, Slider } from "std-widgets.slint";
 
 struct BodySprite {
     name: string,
@@ -33,6 +33,7 @@ export component MainWindow inherits Window {
     in-out property <float> camera_distance_au: 0;
     in-out property <float> camera_fov_deg: 0;
     in-out property <string> selected_center_name: "Sun";
+    in-out property <float> auto_step_days: 0.25;
 
     callback prev_day();
     callback next_day();
@@ -44,6 +45,7 @@ export component MainWindow inherits Window {
     callback pan_camera(delta_x_px: float, delta_y_px: float, viewport_width_px: float, viewport_height_px: float);
     callback zoom_camera(delta_steps: float);
     callback camera_key(action: string);
+    callback set_auto_step_days(days: float);
 
     changed scene_width => {
         root.scene_resized(root.scene_width, root.scene_height);
@@ -51,6 +53,10 @@ export component MainWindow inherits Window {
 
     changed scene_height => {
         root.scene_resized(root.scene_width, root.scene_height);
+    }
+
+    changed auto_step_days => {
+        root.set_auto_step_days(root.auto_step_days);
     }
 
     Timer {
@@ -128,6 +134,22 @@ export component MainWindow inherits Window {
                 selected => {
                     root.selected_center_name = self.current-value;
                     root.select_center(self.current-value);
+                }
+            }
+
+            VerticalBox {
+                width: 260px;
+                spacing: 2px;
+
+                Text {
+                    text: "Auto-Tempo (Tage/Tick): " + root.auto_step_days;
+                    font-size: 12px;
+                }
+
+                Slider {
+                    minimum: 0.01;
+                    maximum: 1.0;
+                    value <=> root.auto_step_days;
                 }
             }
         }
