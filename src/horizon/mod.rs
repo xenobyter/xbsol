@@ -6,10 +6,14 @@ use crate::model::{BodyMeta, EphemerisRecord, StateVector};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Deserialize;
 use std::fmt;
+use std::path::{Path, PathBuf};
 
 const HORIZONS_CENTER: &str = "500@10";
 const HORIZONS_REF_PLANE: &str = "ECLIPTIC";
 const HORIZONS_STEP_SIZE: &str = "1 d";
+const HORIZONS_START_TIME: &str = "2026-01-01";
+const HORIZONS_STOP_TIME: &str = "2026-12-31";
+const HORIZONS_CACHE_DIR: &str = "cache/horizons";
 
 #[derive(Debug)]
 enum HorizonsParseError {
@@ -69,9 +73,26 @@ struct HorizonsJsonResponse {
 /// * Das Parsen des Textinhalts oder der Datumsangaben fehlschlägt.
 pub async fn get_ephemerides(client: &reqwest::Client, body: BodyMeta) -> Result<Vec<EphemerisRecord>, Box<dyn std::error::Error>> {
     let command = body.command();
+
+    if let Some(cached_json) = load_cached_horizons_data(command)? {
+        log::info!(
+            "Nutze lokalen Horizons-Cache für COMMAND={} im Zeitraum {} bis {}",
+            command,
+            HORIZONS_START_TIME,
+            HORIZONS_STOP_TIME
+        );
+        let parsed_data = parse_horizons_response(&cached_json, body)?;
+        return Ok(parsed_data);
+    }
+
     let data = get_horizons_data(client, command).await?;
     // Mit dem '?' extrahieren wir das Result aus dem Parser und werfen Fehler hoch
     let parsed_data = parse_horizons_response(&data, body)?;
+
+    if let Err(error) = save_cached_horizons_data(command, &data) {
+        log::warn!("Konnte Horizons-Cache nicht speichern für COMMAND={}: {}", command, error);
+    }
+
     Ok(parsed_data)
 }
 
@@ -85,18 +106,52 @@ async fn get_horizons_data(client: &reqwest::Client, command: &str) -> Result<St
         ("MAKE_EPHEM", "YES"),
         ("OBJ_DATA", "NO"),
         ("EPHEM_TYPE", "VECTORS"),
-        ("START_TIME", "2026-01-01"),
-        ("STOP_TIME", "2026-12-31"),
-        ("STEP_SIZE", "1 d"),
+        ("START_TIME", HORIZONS_START_TIME),
+        ("STOP_TIME", HORIZONS_STOP_TIME),
+        ("STEP_SIZE", HORIZONS_STEP_SIZE),
         ("VEC_TABLE", "2"),
         ("OUT_UNITS", "KM-S"),
-        ("REF_PLANE", "ECLIPTIC"),
+        ("REF_PLANE", HORIZONS_REF_PLANE),
     ];
     let response = client.get(url).query(&params).send().await?;
 
     let text = response.text().await?;
     log::debug!("Horizons API Response für {}:\n{}", command, text);
     Ok(text)
+}
+
+fn load_cached_horizons_data(command: &str) -> Result<Option<String>, std::io::Error> {
+    let path = cache_file_path(command);
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let content = std::fs::read_to_string(path)?;
+    Ok(Some(content))
+}
+
+fn save_cached_horizons_data(command: &str, content: &str) -> Result<(), std::io::Error> {
+    let path = cache_file_path(command);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(path, content)
+}
+
+fn cache_file_path(command: &str) -> PathBuf {
+    Path::new(HORIZONS_CACHE_DIR).join(format!(
+        "{}_{}_{}.json",
+        sanitize_for_file_name(command),
+        sanitize_for_file_name(HORIZONS_START_TIME),
+        sanitize_for_file_name(HORIZONS_STOP_TIME),
+    ))
+}
+
+fn sanitize_for_file_name(value: &str) -> String {
+    value
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect()
 }
 
 fn parse_horizons_response(json_data: &str, body: BodyMeta) -> Result<Vec<EphemerisRecord>, Box<dyn std::error::Error>> {
