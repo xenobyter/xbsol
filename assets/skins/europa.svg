@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Helle, bläulich-weiße Eis-Basis von Europa mit radialer Tiefenwirkung -->
+    <radialGradient id="europaGrad" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#f4f8fa" />
+      <stop offset="45%" stop-color="#dae5eb" />
+      <stop offset="80%" stop-color="#9cb2bd" />
+      <stop offset="100%" stop-color="#556c78" />
+    </radialGradient>
+
+    <!-- Globale 3D-Schattierung (Tag-Nacht-Grenze) -->
+    <radialGradient id="europaShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="50%" stop-color="#000000" stop-opacity="0.25" />
+      <stop offset="85%" stop-color="#000000" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.95" />
+    </radialGradient>
+  </defs>
+
+  <!-- 1. Die Europa-Kugel (Eis-Basis) -->
+  <circle cx="256" cy="256" r="160" fill="url(#europaGrad)" />
+
+  <!-- 2. Sanfte, großflächige Verfärbungen (Mineralsalze/Schmutzeis an den Polen) -->
+  <g fill="#9c785c" opacity="0.15">
+    <!-- Bräunliche Tönung am Südpol und in Äquatornähe -->
+    <circle cx="256" cy="380" r="60" />
+    <path d="M 120 220 q 60 40 140 10 q 80 -30 140 0 q -40 50 -140 20 q -100 -30 -140 -30 z" />
+  </g>
+
+  <!-- 3. Die Lineae (Das charakteristische, rötlich-braune Netzwerk aus Eisrissen) -->
+  <!-- Alle Pfade sind mathematisch so gesetzt, dass sie innerhalb des 160px Radius (Mittelpunkt 256,256) bleiben -->
+  <g fill="none" stroke="#7a5841" stroke-linecap="round" opacity="0.75">
+    <!-- Hauptadern / Lange, geschwungene Bruchlinien (Breite Linien) -->
+    <path d="M 130 180 q 70 20 160 -40 q 50 -35 90 -20" stroke-width="2.5" />
+    <path d="M 110 240 c 40 -10, 90 40, 160 20 c 50 -15, 90 -60, 120 -60" stroke-width="2" />
+    <path d="M 160 350 q 80 -40 110 -110 q 30 -70 -10 -110" stroke-width="2.2" />
+    <path d="M 220 385 q 40 -60 110 -70 q 40 -5 60 25" stroke-width="1.8" />
+    <path d="M 145 130 q 60 50 80 130 q 20 80 -40 105" stroke-width="2" />
+
+    <!-- Feinere, sich kreuzende Nebenrisse (Dünnere Linien) -->
+    <g stroke="#916d54" stroke-width="1" opacity="0.8">
+      <path d="M 105 200 q 40 10 70 -30" />
+      <path d="M 180 130 q -20 50 20 80" />
+      <path d="M 250 110 q 30 30 10 70" />
+      <path d="M 270 170 q 60 -10 95 -40" />
+      <path d="M 210 215 q 50 15 70 60" />
+      <path d="M 310 210 q 40 30 65 10" />
+      <path d="M 150 280 q 60 -10 90 30" />
+      <path d="M 175 320 q -30 -30 -40 -60" />
+      <path d="M 280 290 q 40 40 70 10" />
+      <path d="M 240 350 q 30 20 60 -10" />
+      <path d="M 330 270 q 40 -40 50 -80" />
+    </g>
+  </g>
+
+  <!-- 4. Lenticulae (Kleine, rötliche Flecken und "Chaos-Regionen" auf der Oberfläche) -->
+  <g fill="#6e4d37" opacity="0.6">
+    <circle cx="180" cy="160" r="3" />
+    <circle cx="290" cy="135" r="4" />
+    <circle cx="230" cy="240" r="3.5" />
+    <circle cx="340" cy="220" r="5" />
+    <circle cx="150" cy="255" r="3" />
+    <circle cx="315" cy="295" r="4" />
+    <circle cx="205" cy="335" r="3" />
+    <!-- Ein kleiner "Chaos-Gelände"-Cluster -->
+    <ellipse cx="270" cy="190" rx="6" ry="4" opacity="0.4" />
+    <ellipse cx="160" cy="210" rx="5" ry="3" opacity="0.4" />
+  </g>
+
+  <!-- 5. Globale 3D-Schattierung (Liegt als transparente Ebene über dem filigranen Rissnetzwerk) -->
+  <circle cx="256" cy="256" r="160" fill="url(#europaShadow)" />
+
+  <!-- 6. Innerer Lichtkranz (Hebt die eisige, glänzende Kugelstruktur hervor) -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#ffffff" stroke-width="5" opacity="0.3" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#dae5eb" stroke-width="1.5" opacity="0.4" />
+</svg>

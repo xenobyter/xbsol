@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <!-- Base global shading representing the planetary illumination -->
+    <radialGradient id="mercuryBase" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#e0e0e0"/>
+      <stop offset="50%" stop-color="#8a8a8a"/>
+      <stop offset="80%" stop-color="#3a3a3c"/>
+      <stop offset="100%" stop-color="#050505"/>
+    </radialGradient>
+
+    <!-- Overlay shading for the stark terminator line on the right -->
+    <linearGradient id="terminator" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="40%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="75%" stop-color="#000" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- Crater texture mask pattern -->
+    <filter id="craterGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Perfectly round clip path for the planet body -->
+  <g>
+    <!-- Main Planet Sphere -->
+    <circle cx="400" cy="400" r="380" fill="url(#mercuryBase)"/>
+
+    <!-- Fine Surface Texture, Complex Cratering and Ray Systems -->
+    <!-- Large Northern Ray System (Top Left Crater) -->
+    <g stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.5">
+      <line x1="210" y1="220" x2="120" y2="180"/>
+      <line x1="210" y1="220" x2="150" y2="300"/>
+      <line x1="210" y1="220" x2="300" y2="190"/>
+      <line x1="210" y1="220" x2="280" y2="280"/>
+      <line x1="210" y1="220" x2="230" y2="100"/>
+      <line x1="210" y1="220" x2="130" y2="240"/>
+    </g>
+    <circle cx="210" cy="220" r="14" fill="#f0f0f0" fill-opacity="0.6" filter="url(#craterGlow)"/>
+    <circle cx="210" cy="220" r="6" fill="#ffffff"/>
+
+    <!-- Central Bright Crater & Dominant Ray Network (The distinctive bright spot near center) -->
+    <g stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.2">
+      <!-- Long structural rays spanning across the globe -->
+      <line x1="385" y1="420" x2="210" y2="220" stroke-opacity="0.2" stroke-width="2"/>
+      <line x1="385" y1="420" x2="550" y2="500"/>
+      <line x1="385" y1="420" x2="480" y2="300"/>
+      <line x1="385" y1="420" x2="410" y2="620"/>
+      <line x1="385" y1="420" x2="290" y2="550"/>
+      <line x1="385" y1="420" x2="240" y2="460"/>
+      <line x1="385" y1="420" x2="320" y2="320"/>
+      <line x1="385" y1="420" x2="500" y2="400"/>
+      <line x1="385" y1="420" x2="440" y2="200"/>
+      <line x1="385" y1="420" x2="350" y2="680"/>
+      <line x1="385" y1="420" x2="180" y2="580"/>
+      <line x1="385" y1="420" x2="620" y2="380"/>
+    </g>
+    <circle cx="385" cy="420" r="16" fill="#ffffff" fill-opacity="0.5" filter="url(#craterGlow)"/>
+    <circle cx="385" cy="420" r="7" fill="#ffffff"/>
+
+    <!-- Secondary and minor crater distributions across the surface -->
+    <!-- Left highly cratered highland -->
+    <circle cx="150" cy="430" r="18" fill="#5a5a5c" fill-opacity="0.4" stroke="#8a8a8c" stroke-width="1"/>
+    <circle cx="170" cy="570" r="12" fill="#4a4a4c" fill-opacity="0.5" stroke="#7a7a7c" stroke-width="1"/>
+    <circle cx="280" cy="650" r="22" fill="#3a3a3c" fill-opacity="0.4" stroke="#6a6a6c" stroke-width="1"/>
+    <circle cx="230" cy="490" r="8" fill="#d0d0d0" fill-opacity="0.6"/>
+    
+    <!-- Medium Craters & Maria-like structures scattered -->
+    <circle cx="490" cy="260" r="25" fill="#333335" fill-opacity="0.6" stroke="#555557" stroke-width="1.5"/>
+    <circle cx="560" cy="340" r="15" fill="#2d2d2f" fill-opacity="0.7" stroke="#4a4a4c" stroke-width="1"/>
+    <circle cx="530" cy="520" r="30" fill="#222224" fill-opacity="0.6" stroke="#444446" stroke-width="1"/>
+    <circle cx="330" cy="150" r="14" fill="#666668" fill-opacity="0.5"/>
+    <circle cx="450" cy="140" r="19" fill="#4f4f51" fill-opacity="0.5"/>
+    
+    <!-- High-frequency tiny impact micro-craters for realism -->
+    <circle cx="290" cy="340" r="4" fill="#ffffff" fill-opacity="0.7"/>
+    <circle cx="320" cy="480" r="5" fill="#ffffff" fill-opacity="0.6"/>
+    <circle cx="220" cy="380" r="3" fill="#ffffff" fill-opacity="0.8"/>
+    <circle cx="360" cy="270" r="5" fill="#ffffff" fill-opacity="0.5"/>
+    <circle cx="420" cy="350" r="4" fill="#ffffff" fill-opacity="0.4"/>
+    <circle cx="460" cy="460" r="6" fill="#ffffff" fill-opacity="0.3"/>
+    
+    <!-- Right side shadowy craters (Terminator zone) -->
+    <circle cx="610" cy="250" r="16" fill="#151517" stroke="#2a2a2c" stroke-width="1"/>
+    <circle cx="660" cy="420" r="20" fill="#0d0d0f" stroke="#202022" stroke-width="1"/>
+    <circle cx="590" cy="600" r="18" fill="#111113" stroke="#252527" stroke-width="1"/>
+
+    <!-- Planetary shadow overlay (Terminator) -->
+    <circle cx="400" cy="400" r="380" fill="url(#terminator)"/>
+  </g>
+</svg>

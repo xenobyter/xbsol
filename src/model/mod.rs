@@ -108,6 +108,24 @@ impl BodyId {
             BodyId::Deimos => (168, 160, 146),
         }
     }
+
+    pub const fn sprite_stem(self) -> &'static str {
+        match self {
+            BodyId::Sun => "sun",
+            BodyId::Mercury => "mercury",
+            BodyId::Venus => "venus",
+            BodyId::Earth => "earth",
+            BodyId::Moon => "moon",
+            BodyId::Mars => "mars",
+            BodyId::Jupiter => "jupiter",
+            BodyId::Io => "io",
+            BodyId::Europa => "europa",
+            BodyId::Ganymede => "ganymede",
+            BodyId::Callisto => "callisto",
+            BodyId::Phobos => "phobos",
+            BodyId::Deimos => "deimos",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

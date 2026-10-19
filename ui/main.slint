@@ -2,6 +2,8 @@ import { VerticalBox, HorizontalBox, Button, ComboBox, Slider } from "std-widget
 
 struct BodySprite {
     name: string,
+    texture: image,
+    has_texture: bool,
     x_px: float,
     y_px: float,
     radius_px: float,
@@ -129,7 +131,7 @@ export component MainWindow inherits Window {
             spacing: 8px;
             ComboBox {
                 width: 180px;
-                model: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Io", "Europa", "Ganymede", "Callisto"];
+                model: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Io", "Europa", "Ganymede", "Callisto", "Phobos", "Deimos"];
                 current-value: root.selected_center_name;
                 selected => {
                     root.selected_center_name = self.current-value;
@@ -217,7 +219,15 @@ export component MainWindow inherits Window {
                 x: body.x_px * 1px - self.width / 2;
                 y: body.y_px * 1px - self.height / 2;
                 border-radius: self.width / 2;
-                background: body.color;
+                background: body.has_texture ? transparent : body.color;
+                clip: true;
+
+                Image {
+                    width: parent.width;
+                    height: parent.height;
+                    source: body.texture;
+                    image-fit: cover;
+                }
             }
         }
 

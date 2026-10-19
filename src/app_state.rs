@@ -13,6 +13,7 @@ const MIN_DEPTH_FOR_RADIUS: f64 = 0.2;
 #[derive(Debug, Clone)]
 pub struct RenderBody {
     pub name: String,
+    pub sprite_stem: String,
     pub x_px: f32,
     pub y_px: f32,
     pub radius_px: f32,
@@ -482,6 +483,7 @@ impl AppState {
 
         Some(RenderBody {
             name: body_id.name().to_string(),
+            sprite_stem: body_id.sprite_stem().to_string(),
             x_px,
             y_px,
             radius_px,

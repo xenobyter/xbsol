@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Dunkle, alt-gesteinige Basis von Callisto mit Tiefenwirkung -->
+    <radialGradient id="callistoGrad" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#695f55" />
+      <stop offset="50%" stop-color="#4a4138" />
+      <stop offset="85%" stop-color="#2b251f" />
+      <stop offset="100%" stop-color="#14100c" />
+    </radialGradient>
+
+    <!-- Helles, freigelegtes Wassereis für die Kraterzentren -->
+    <radialGradient id="iceGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="40%" stop-color="#d1e6f0" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#695f55" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Globale 3D-Schattierung (Tag-Nacht-Grenze) -->
+    <radialGradient id="callistoShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="50%" stop-color="#000000" stop-opacity="0.3" />
+      <stop offset="85%" stop-color="#000000" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.98" />
+    </radialGradient>
+  </defs>
+
+  <!-- 1. Die Callisto-Kugel (Basis) -->
+  <circle cx="256" cy="256" r="160" fill="url(#callistoGrad)" />
+
+  <!-- 2. Muster aus unzähligen hellen Frost- und Eisflächen (Krater-Netzwerk) -->
+  <g fill="#c9beaf" opacity="0.4">
+    <!-- Unregelmäßige, ältere Einschlagsgebiete -->
+    <path d="M 140 160 q 20 -10 30 -30 q 40 10 20 40 q -15 20 -35 -5 z" />
+    <path d="M 320 280 q 15 -35 40 -20 q 20 30 -15 35 q -20 5 -25 -15 z" />
+    <path d="M 220 340 q 30 -5 25 25 q -20 20 -35 -10 q -5 -10 10 -15 z" />
+    <path d="M 280 150 q 20 -20 40 5 q -10 25 -30 10 q -15 -5 -10 -15 z" />
+  </g>
+
+  <!-- 3. Das riesige Valhalla-Impaktbecken (Oben Links) -->
+  <!-- Konzentrische, helle Stoßwellen-Ringe um das Zentrum -->
+  <g stroke="#e3f2fd" fill="none" opacity="0.35" stroke-linecap="round">
+    <circle cx="180" cy="170" r="15" stroke-width="1.5" stroke-dasharray="4,6" />
+    <circle cx="180" cy="170" r="30" stroke-width="2" stroke-dasharray="8,10" />
+    <circle cx="180" cy="170" r="50" stroke-width="1.5" stroke-dasharray="12,14" />
+    <circle cx="180" cy="170" r="75" stroke-width="1" stroke-dasharray="15,20" />
+  </g>
+  <!-- Helles, eisiges Zentrum des Einschlags -->
+  <circle cx="180" cy="170" r="8" fill="url(#iceGlow)" />
+
+  <!-- 4. Das kleinere Asgard-Impaktbecken (Unten Rechts) -->
+  <g stroke="#e3f2fd" fill="none" opacity="0.3" stroke-linecap="round">
+    <circle cx="310" cy="300" r="12" stroke-width="1.5" stroke-dasharray="3,5" />
+    <circle cx="310" cy="300" r="25" stroke-width="1.5" stroke-dasharray="6,8" />
+    <circle cx="310" cy="300" r="45" stroke-width="1" stroke-dasharray="10,12" />
+  </g>
+  <circle cx="310" cy="300" r="6" fill="url(#iceGlow)" />
+
+  <!-- 5. Einzelne, helle, punktförmige Krater (frische Einschläge, die helles Eis aufgeworfen haben) -->
+  <g fill="#ffffff" opacity="0.75">
+    <circle cx="240" cy="210" r="3" />
+    <circle cx="130" cy="260" r="2.5" />
+    <circle cx="210" cy="290" r="4" />
+    <circle cx="360" cy="180" r="3.5" />
+    <circle cx="280" cy="360" r="2" />
+    <circle cx="160" cy="330" r="3" />
+    <circle cx="330" cy="130" r="2" />
+    <circle cx="220" cy="110" r="3.5" />
+    <!-- Kleine Strahlenbänder an zwei Kratern -->
+    <path d="M 210 290 l -10 -10 M 210 290 l 12 8 M 210 290 l -5 12 M 210 290 l 8 -12" stroke="#ffffff" stroke-width="0.7" opacity="0.5" />
+    <path d="M 360 180 l -12 4 M 360 180 l 10 -8 M 360 180 l 2 12 M 360 180 l -6 -10" stroke="#ffffff" stroke-width="0.7" opacity="0.5" />
+  </g>
+
+  <!-- 6. Globale 3D-Schattierung (Liegt als transparente Ebene über den Kratern) -->
+  <circle cx="256" cy="256" r="160" fill="url(#callistoShadow)" />
+
+  <!-- 7. Innerer Lichtkranz für den finalen Kugel-Look -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#e0e0e0" stroke-width="4" opacity="0.15" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#695f55" stroke-width="1" opacity="0.25" />
+</svg>

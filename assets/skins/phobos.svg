@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Aschgraue Marsmond-Oberfläche mit radialer Tiefenwirkung -->
+    <radialGradient id="phobosGrad" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#a89f96" />
+      <stop offset="40%" stop-color="#80776e" />
+      <stop offset="75%" stop-color="#524b44" />
+      <stop offset="100%" stop-color="#2b2622" />
+    </radialGradient>
+
+    <!-- Dunkle Senken, Kraterböden und Rillenstrukturen -->
+    <radialGradient id="craterDark" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#3d3731" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#24201c" stop-opacity="0.95" />
+    </radialGradient>
+
+    <!-- Globale 3D-Schattierung (Exakt auf die unregelmäßige Form abgestimmt) -->
+    <radialGradient id="phobosShadow" cx="30%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="45%" stop-color="#000000" stop-opacity="0.25" />
+      <stop offset="75%" stop-color="#000000" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.98" />
+    </radialGradient>
+  </defs>
+
+  <!-- 1. Der unregelmäßige, kartoffelförmige Basiskörper von Phobos -->
+  <path d="M 220 110 
+           q 40 -15 90 -5 
+           q 60 10 80 40 
+           q 25 35 15 80 
+           q -5 45 -15 70 
+           q -20 50 -60 70 
+           q -60 30 -110 5 
+           q -40 -20 -60 -55 
+           q -25 -45 -10 -85 
+           q 15 -35 5 -60 
+           q -10 -25 15 -50 
+           q 25 -25 50 -10 Z" 
+        fill="url(#phobosGrad)" />
+
+  <!-- 2. Oberflächen-Strukturen und markante Krater -->
+  <g fill="url(#craterDark)">
+    <!-- Der riesige Stickney-Krater (Links, bricht leicht in den Außenrand ein) -->
+    <path d="M 140 210 q 25 -20 45 -5 q 20 20 -5 40 q -30 20 -45 -5 q -10 -15 5 -30 z" opacity="0.85" />
+    <!-- Hellerer Kraterwall-Effekt für den Stickney-Krater -->
+    <path d="M 138 212 q 25 -18 43 -3 q 5 5 1 12" fill="none" stroke="#c2b9af" stroke-width="2" opacity="0.5" />
+
+    <!-- Kleinere Krater auf der Oberfläche verstreut -->
+    <circle cx="280" cy="160" r="14" opacity="0.7" />
+    <circle cx="330" cy="220" r="18" opacity="0.6" />
+    <circle cx="240" cy="280" r="22" opacity="0.75" />
+    <circle cx="310" cy="310" r="10" opacity="0.65" />
+    <circle cx="210" cy="140" r="8" opacity="0.5" />
+
+    <!-- Charakteristische Oberflächenrillen (Grooves), die von Stickney ausgehen -->
+    <path d="M 180 220 q 40 -20 90 -10 M 185 235 q 50 -10 110 15 M 175 205 q 35 -40 75 -45 M 230 290 q 40 30 70 10" 
+          fill="none" stroke="#24201c" stroke-width="2.5" opacity="0.4" stroke-linecap="round" />
+  </g>
+
+  <!-- 3. Helle Kraterränder für plastische Tiefe (Lichtkanten) -->
+  <g fill="none" stroke="#ded5cb" stroke-width="1.5" opacity="0.4" stroke-linecap="round">
+    <path d="M 268 164 q 12 10 24 -4" />
+    <path d="M 314 224 q 16 14 32 -2" />
+    <path d="M 220 285 q 20 18 40 -4" />
+  </g>
+
+  <!-- 4. Globale 3D-Schattierung (Exakt auf denselben unregelmäßigen Pfad gelegt) -->
+  <path d="M 220 110 
+           q 40 -15 90 -5 
+           q 60 10 80 40 
+           q 25 35 15 80 
+           q -5 45 -15 70 
+           q -20 50 -60 70 
+           q -60 30 -110 5 
+           q -40 -20 -60 -55 
+           q -25 -45 -10 -85 
+           q 15 -35 5 -60 
+           q -10 -25 15 -50 
+           q 25 -25 50 -10 Z" 
+        fill="url(#phobosShadow)" />
+</svg>

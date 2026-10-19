@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Rötlich-graue Deimos-Oberfläche mit radialer Tiefenwirkung -->
+    <radialGradient id="deimosGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#b0a499" />
+      <stop offset="35%" stop-color="#8a7e73" />
+      <stop offset="75%" stop-color="#594f46" />
+      <stop offset="100%" stop-color="#2e2620" />
+    </radialGradient>
+
+    <!-- Flache, staubbedeckte Senken und sanfte Kraterböden -->
+    <radialGradient id="deimosDark" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#423b35" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#241f1b" stop-opacity="0.9" />
+    </radialGradient>
+
+    <!-- Globale 3D-Schattierung (Exakt an die Kissenform angepasst) -->
+    <radialGradient id="deimosShadow" cx="30%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="45%" stop-color="#000000" stop-opacity="0.25" />
+      <stop offset="80%" stop-color="#000000" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.98" />
+    </radialGradient>
+  </defs>
+
+  <!-- 1. Der unregelmäßige, leicht längliche und abgerundete Körper von Deimos -->
+  <path d="M 240 140 
+           q 60 -30 110 -10 
+           q 50 20 60 70 
+           q 10 50 -20 90 
+           q -30 40 -80 50 
+           q -60 15 -110 -10 
+           q -50 -25 -65 -65 
+           q -15 -40 5 -75 
+           q 20 -35 50 -50 Z" 
+        fill="url(#deimosGrad)" />
+
+  <!-- 2. Sehr sanfte, staubüberlagerte Oberflächenstrukturen (Krater Swift & Voltaire) -->
+  <g fill="url(#deimosDark)">
+    <!-- Krater Swift (Größere, flache Senke oben rechts) -->
+    <path d="M 310 180 q 15 -15 30 -5 q 15 10 -5 25 q -20 15 -30 -5 z" opacity="0.6" />
+    
+    <!-- Krater Voltaire (Senke unten links) -->
+    <path d="M 210 260 q 20 -10 30 10 q 10 20 -15 25 q -25 5 -25 -20 z" opacity="0.65" />
+
+    <!-- Einige wenige, winzige, fast flache Kraterpunkte -->
+    <circle cx="270" cy="220" r="8" opacity="0.5" />
+    <circle cx="340" cy="240" r="6" opacity="0.4" />
+    <circle cx="200" cy="180" r="10" opacity="0.5" />
+    <circle cx="280" cy="155" r="5" opacity="0.4" />
+  </g>
+
+  <!-- 3. Sanfte helle Staub-Ablagerungen (Regolith-Hügel) für plastische Tiefe -->
+  <g fill="none" stroke="#ded4ca" stroke-width="2" opacity="0.3" stroke-linecap="round">
+    <!-- Lichtkanten an den sanften Erhebungen -->
+    <path d="M 250 155 q 35 -15 65 5" />
+    <path d="M 175 220 q 20 -30 40 -10" />
+    <path d="M 325 183 q 10 10 20 -2" />
+  </g>
+
+  <!-- 4. Globale 3D-Schattierung (Exakt auf dieselbe Kissenform gelegt) -->
+  <path d="M 240 140 
+           q 60 -30 110 -10 
+           q 50 20 60 70 
+           q 10 50 -20 90 
+           q -30 40 -80 50 
+           q -60 15 -110 -10 
+           q -50 -25 -65 -65 
+           q -15 -40 5 -75 
+           q 20 -35 50 -50 Z" 
+        fill="url(#deimosShadow)" />
+</svg>

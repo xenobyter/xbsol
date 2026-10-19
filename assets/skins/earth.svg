@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Ozean-Basisfarbe -->
+    <radialGradient id="oceanGrad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#1d63b8" />
+      <stop offset="65%" stop-color="#0d3b75" />
+      <stop offset="100%" stop-color="#051c3b" />
+    </radialGradient>
+
+    <!-- Kontinente Gradient -->
+    <radialGradient id="landGrad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#4caf50" />
+      <stop offset="70%" stop-color="#2e7d32" />
+      <stop offset="100%" stop-color="#1b5e20" />
+    </radialGradient>
+
+    <!-- Wolken Gradient -->
+    <radialGradient id="cloudGrad" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.75" />
+      <stop offset="60%" stop-color="#e0f7fa" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Globale 3D-Schattierung -->
+    <radialGradient id="planetShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="50%" stop-color="#000000" stop-opacity="0.3" />
+      <stop offset="85%" stop-color="#000000" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.95" />
+    </radialGradient>
+  </defs>
+
+  <!-- 1. Äußere Atmosphäre (Liegt hinter der Erde, ragt leicht über) -->
+  <circle cx="256" cy="256" r="163" fill="#4fc3f7" opacity="0.2" />
+
+  <!-- 2. Der Ozean (Die Basis-Kugel) -->
+  <circle cx="256" cy="256" r="160" fill="url(#oceanGrad)" />
+
+  <!-- 3. Die Kontinente (Pfade so angepasst, dass sie innerhalb des 160px Radius bleiben) -->
+  <g fill="url(#landGrad)" opacity="0.95">
+    <!-- Nordamerika / Grönland -->
+    <path d="M 145 150 q 20 -20 40 -25 q 25 -5 30 5 q 5 10 -10 15 q -20 10 -15 25 q 10 10 20 5 q 20 -5 25 -20 q 5 -10 15 -15 q 20 -5 10 15 q -5 20 -15 20 q -15 5 -20 15 q -10 20 -5 30 q 5 15 -5 25 q -10 10 -20 -5 q -10 -15 -25 -5 q -15 10 -20 -10 q -5 -25 -25 -30 q -10 -5 -10 -15 z" />
+    <path d="M 245 105 q 10 -15 25 -10 q 10 10 -5 20 q -15 5 -20 -10 z" />
+    <!-- Südamerika -->
+    <path d="M 185 265 q 20 10 30 20 q 15 20 25 45 q 10 30 -5 50 q -10 15 -15 30 q -5 10 -10 -5 q -5 -20 -15 -35 q -15 -15 -20 -35 q -10 -20 -10 -35 q -5 -15 15 -35 z" />
+    <!-- Westküste Afrika -->
+    <path d="M 345 200 q 15 -15 30 -20 q 15 -5 20 10 q -5 15 -5 30 q 0 20 -15 30 q -15 15 -25 5 q -15 -15 -5 -30 q 5 -15 5 -25 z" />
+  </g>
+
+  <!-- 4. Wolkenbänder (Ebenfalls auf das Kugelinnere zentriert) -->
+  <g fill="url(#cloudGrad)">
+    <path d="M 120 170 c 30 -30, 80 -20, 120 -5 c 40 15, 80 -10, 120 5 c 15 10, -10 20, -40 10 c -35 -10, -70 5, -110 -10 c -30 -15, -60 15, -90 0 z" />
+    <path d="M 105 260 c 40 -15, 90 -5, 130 -20 c 45 -15, 95 10, 125 25 c -20 10, -60 -10, -110 5 c -40 15, -90 -10, -120 -5 c -15 0, -20 -2, -25 -5 z" />
+    <path d="M 145 350 c 30 -5, 60 -15, 100 -5 c 35 10, 70 -5, 95 10 c -25 15, -60 0, -90 -10 c -30 -10, -60 10, -85 5 c -10 0, -15 -3, -20 -5 z" />
+  </g>
+
+  <!-- 5. Globale 3D-Schattierung (Liegt als transparente Ebene exakt über dem Ozean und den Kontinenten) -->
+  <circle cx="256" cy="256" r="160" fill="url(#planetShadow)" />
+
+  <!-- 6. Innere Atmosphäre / Leuchtrand (Liegt ganz oben auf) -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#e0f7fa" stroke-width="6" opacity="0.25" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#4fc3f7" stroke-width="2" opacity="0.35" />
+</svg>
