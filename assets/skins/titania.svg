@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="titaniaGrad" cx="40%" cy="34%" r="63%">
+      <stop offset="0%" stop-color="#e4ddd5" />
+      <stop offset="50%" stop-color="#b8ada1" />
+      <stop offset="86%" stop-color="#786d63" />
+      <stop offset="100%" stop-color="#3f3732" />
+    </radialGradient>
+
+    <radialGradient id="titaniaShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.26" />
+      <stop offset="88%" stop-color="#000000" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.95" />
+    </radialGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="160" fill="url(#titaniaGrad)" />
+
+  <g fill="#cabfb3" opacity="0.42">
+    <path d="M 108 188 c 52 -16, 102 -6, 148 -16 c 50 -10, 104 8, 148 16 c -34 11, -88 1, -148 10 c -54 8, -104 -2, -148 -10 z" />
+    <path d="M 102 302 c 56 -15, 108 -5, 154 -15 c 48 -9, 102 8, 154 15 c -32 12, -88 0, -154 10 c -58 8, -110 -2, -154 -10 z" />
+  </g>
+
+  <g fill="#8e8276" opacity="0.52">
+    <ellipse cx="178" cy="240" rx="20" ry="12" />
+    <ellipse cx="296" cy="218" rx="24" ry="14" />
+    <ellipse cx="342" cy="324" rx="18" ry="10" />
+    <ellipse cx="238" cy="354" rx="16" ry="9" />
+  </g>
+
+  <g fill="#efe7de" opacity="0.3">
+    <ellipse cx="214" cy="154" rx="40" ry="12" />
+    <ellipse cx="318" cy="286" rx="30" ry="9" />
+  </g>
+
+  <circle cx="256" cy="256" r="160" fill="url(#titaniaShadow)" />
+
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#f5eee6" stroke-width="4.2" opacity="0.22" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#a69686" stroke-width="1.8" opacity="0.3" />
+</svg>

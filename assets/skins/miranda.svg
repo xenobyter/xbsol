@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="mirandaGrad" cx="40%" cy="34%" r="63%">
+      <stop offset="0%" stop-color="#efe6dc" />
+      <stop offset="50%" stop-color="#b7a69a" />
+      <stop offset="86%" stop-color="#74655b" />
+      <stop offset="100%" stop-color="#3a2f2a" />
+    </radialGradient>
+
+    <radialGradient id="mirandaShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.26" />
+      <stop offset="88%" stop-color="#000000" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.95" />
+    </radialGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="160" fill="url(#mirandaGrad)" />
+
+  <g fill="#8f7f73" opacity="0.45">
+    <path d="M 118 212 q 40 -30 84 -16 q 38 12 68 -12 q 32 -22 70 -5 q 22 9 8 28 q -18 24 -52 22 q -44 -3 -78 8 q -44 14 -78 4 q -28 -8 -22 -29 z" />
+    <path d="M 156 322 q 36 -17 70 -6 q 34 10 60 -9 q 30 -21 62 -4 q 22 10 5 26 q -20 18 -50 16 q -36 -2 -66 8 q -34 11 -58 2 q -24 -8 -23 -33 z" />
+  </g>
+
+  <g fill="#d7cec4" opacity="0.35">
+    <ellipse cx="206" cy="155" rx="34" ry="10" />
+    <ellipse cx="318" cy="284" rx="28" ry="8" />
+    <ellipse cx="242" cy="364" rx="30" ry="9" />
+  </g>
+
+  <g fill="#68594f" opacity="0.48">
+    <circle cx="178" cy="254" r="12" />
+    <ellipse cx="290" cy="230" rx="16" ry="10" />
+    <ellipse cx="330" cy="332" rx="14" ry="9" />
+  </g>
+
+  <circle cx="256" cy="256" r="160" fill="url(#mirandaShadow)" />
+
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#f2e8dd" stroke-width="4" opacity="0.22" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#9f8a79" stroke-width="1.7" opacity="0.3" />
+</svg>

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="uranusGrad" cx="40%" cy="34%" r="63%">
+      <stop offset="0%" stop-color="#dff8ff" />
+      <stop offset="50%" stop-color="#9ad9ea" />
+      <stop offset="86%" stop-color="#4f91a9" />
+      <stop offset="100%" stop-color="#274a59" />
+    </radialGradient>
+
+    <linearGradient id="uranusBandA" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#bfeef8" stop-opacity="0.55" />
+      <stop offset="50%" stop-color="#82c7db" stop-opacity="0.34" />
+      <stop offset="100%" stop-color="#5aa6bf" stop-opacity="0.26" />
+    </linearGradient>
+
+    <linearGradient id="uranusRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eaf8ff" stop-opacity="0.48" />
+      <stop offset="50%" stop-color="#9fd3e2" stop-opacity="0.24" />
+      <stop offset="100%" stop-color="#5c8ca2" stop-opacity="0.18" />
+    </linearGradient>
+
+    <radialGradient id="uranusShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.24" />
+      <stop offset="88%" stop-color="#000000" stop-opacity="0.84" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.95" />
+    </radialGradient>
+
+    <clipPath id="uranusClip">
+      <circle cx="256" cy="256" r="160" />
+    </clipPath>
+  </defs>
+
+  <circle cx="256" cy="256" r="160" fill="url(#uranusGrad)" />
+
+  <g clip-path="url(#uranusClip)">
+    <g opacity="0.7">
+      <path d="M 98 188 c 54 -16, 108 -6, 158 -16 c 50 -10, 104 8, 158 16 c -36 11, -90 0, -158 10 c -56 8, -110 -2, -158 -10 z" fill="url(#uranusBandA)" />
+      <path d="M 88 256 c 58 -14, 112 -5, 168 -14 c 52 -9, 108 8, 168 14 c -35 12, -92 1, -168 9 c -58 8, -112 -2, -168 -9 z" fill="#c7f1fb" opacity="0.42" />
+      <path d="M 108 324 c 50 -13, 102 -5, 148 -13 c 48 -8, 100 7, 148 13 c -30 10, -82 0, -148 8 c -52 7, -102 -2, -148 -8 z" fill="#8ec9da" opacity="0.35" />
+    </g>
+
+    <g opacity="0.55" fill="#e9fbff">
+      <ellipse cx="202" cy="152" rx="38" ry="11" />
+      <ellipse cx="310" cy="290" rx="30" ry="9" />
+      <ellipse cx="246" cy="364" rx="34" ry="10" />
+    </g>
+
+    <g opacity="0.5">
+      <path d="M 54 232 q 202 -96 404 0" fill="none" stroke="url(#uranusRingGrad)" stroke-width="8" stroke-linecap="round" />
+      <path d="M 68 280 q 188 90 376 0" fill="none" stroke="#9fc6d4" stroke-opacity="0.28" stroke-width="6" stroke-linecap="round" />
+    </g>
+
+    <circle cx="256" cy="256" r="160" fill="url(#uranusShadow)" />
+  </g>
+
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#ecfbff" stroke-width="4.5" opacity="0.24" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#6fb2c8" stroke-width="1.8" opacity="0.3" />
+</svg>

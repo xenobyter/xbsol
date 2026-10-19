@@ -60,9 +60,12 @@ const JUPITER_DISTANCE_AU: f32 = 0.02;
 const JUPITER_MOON_DISTANCE_AU: f32 = 0.008;
 const SATURN_DISTANCE_AU: f32 = 0.03;
 const SATURN_MOON_DISTANCE_AU: f32 = 0.012;
+const URANUS_DISTANCE_AU: f32 = 0.03;
+const URANUS_MOON_DISTANCE_AU: f32 = 0.01;
 const MARS_FOV_DEG: f32 = 35.0;
 const JUPITER_FOV_DEG: f32 = 40.0;
 const SATURN_FOV_DEG: f32 = 42.0;
+const URANUS_FOV_DEG: f32 = 42.0;
 const MIN_ELEVATION_DEG: f32 = -85.0;
 const MAX_ELEVATION_DEG: f32 = 85.0;
 const MIN_DISTANCE_AU: f32 = 0.0015;
@@ -185,6 +188,7 @@ impl AppState {
             BodyId::Mars => 24.0,
             BodyId::Jupiter => 78.0,
             BodyId::Saturn => 72.0,
+            BodyId::Uranus => 62.0,
             BodyId::Io => 10.0,
             BodyId::Europa => 10.0,
             BodyId::Ganymede => 12.0,
@@ -196,6 +200,11 @@ impl AppState {
             BodyId::Rhea => 10.0,
             BodyId::Titan => 14.0,
             BodyId::Iapetus => 10.0,
+            BodyId::Miranda => 5.0,
+            BodyId::Ariel => 7.0,
+            BodyId::Umbriel => 7.0,
+            BodyId::Titania => 9.0,
+            BodyId::Oberon => 9.0,
             BodyId::Phobos => 4.0,
             BodyId::Deimos => 4.0,
         }
@@ -245,10 +254,12 @@ impl AppState {
             BodyId::Mars => MARS_DISTANCE_AU,
             BodyId::Jupiter => JUPITER_DISTANCE_AU,
             BodyId::Saturn => SATURN_DISTANCE_AU,
+            BodyId::Uranus => URANUS_DISTANCE_AU,
             BodyId::Io | BodyId::Europa | BodyId::Ganymede | BodyId::Callisto => JUPITER_MOON_DISTANCE_AU,
             BodyId::Mimas | BodyId::Enceladus | BodyId::Tethys | BodyId::Dione | BodyId::Rhea | BodyId::Titan | BodyId::Iapetus => {
                 SATURN_MOON_DISTANCE_AU
             }
+            BodyId::Miranda | BodyId::Ariel | BodyId::Umbriel | BodyId::Titania | BodyId::Oberon => URANUS_MOON_DISTANCE_AU,
             BodyId::Phobos | BodyId::Deimos => MARS_DISTANCE_AU,
         };
 
@@ -262,6 +273,7 @@ impl AppState {
             | BodyId::Rhea
             | BodyId::Titan
             | BodyId::Iapetus => SATURN_FOV_DEG,
+            BodyId::Uranus | BodyId::Miranda | BodyId::Ariel | BodyId::Umbriel | BodyId::Titania | BodyId::Oberon => URANUS_FOV_DEG,
             BodyId::Mars | BodyId::Phobos | BodyId::Deimos => MARS_FOV_DEG,
             _ => DEFAULT_FOV_DEG,
         };
@@ -436,6 +448,7 @@ impl AppState {
             | BodyId::Mars
             | BodyId::Jupiter
             | BodyId::Saturn
+            | BodyId::Uranus
             | BodyId::Io
             | BodyId::Europa
             | BodyId::Ganymede
@@ -447,6 +460,11 @@ impl AppState {
             | BodyId::Rhea
             | BodyId::Titan
             | BodyId::Iapetus
+            | BodyId::Miranda
+            | BodyId::Ariel
+            | BodyId::Umbriel
+            | BodyId::Titania
+            | BodyId::Oberon
             | BodyId::Phobos
             | BodyId::Deimos => Vec3 {
                 x: state.x_km / AU_KM,

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="umbrielGrad" cx="40%" cy="34%" r="63%">
+      <stop offset="0%" stop-color="#d6d1cb" />
+      <stop offset="50%" stop-color="#9b948d" />
+      <stop offset="86%" stop-color="#645d56" />
+      <stop offset="100%" stop-color="#322d29" />
+    </radialGradient>
+
+    <radialGradient id="umbrielShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.28" />
+      <stop offset="88%" stop-color="#000000" stop-opacity="0.86" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.96" />
+    </radialGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="160" fill="url(#umbrielGrad)" />
+
+  <g fill="#7b736b" opacity="0.5">
+    <path d="M 120 206 q 42 -24 82 -12 q 38 12 66 -8 q 30 -20 64 -8 q 22 8 10 24 q -14 20 -46 19 q -42 -2 -72 7 q -42 13 -76 5 q -26 -6 -28 -27 z" />
+    <path d="M 152 330 q 30 -16 62 -8 q 30 8 54 -8 q 26 -16 54 -7 q 18 7 8 18 q -12 14 -38 13 q -32 -2 -56 8 q -30 12 -52 4 q -20 -7 -32 -20 z" />
+  </g>
+
+  <g fill="#bdb4ab" opacity="0.28">
+    <ellipse cx="204" cy="156" rx="35" ry="10" />
+    <ellipse cx="314" cy="286" rx="26" ry="8" />
+  </g>
+
+  <g fill="#5b544d" opacity="0.52">
+    <circle cx="176" cy="260" r="14" />
+    <ellipse cx="300" cy="220" rx="16" ry="11" />
+    <ellipse cx="334" cy="330" rx="18" ry="12" />
+    <circle cx="248" cy="360" r="9" />
+  </g>
+
+  <circle cx="256" cy="256" r="160" fill="url(#umbrielShadow)" />
+
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#e5ddd5" stroke-width="4" opacity="0.2" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#8f867d" stroke-width="1.7" opacity="0.3" />
+</svg>
