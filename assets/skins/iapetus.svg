@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="iapetusBase" cx="40%" cy="34%" r="62%">
+      <stop offset="0%" stop-color="#dfd7ca" />
+      <stop offset="52%" stop-color="#b9aa96" />
+      <stop offset="86%" stop-color="#6f5f4f" />
+      <stop offset="100%" stop-color="#3c322a" />
+    </radialGradient>
+
+    <radialGradient id="iapetusDark" cx="58%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#4f3f33" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#2f241d" stop-opacity="0.95" />
+    </radialGradient>
+
+    <radialGradient id="iapetusShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="56%" stop-color="#000000" stop-opacity="0.2" />
+      <stop offset="88%" stop-color="#000000" stop-opacity="0.84" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.95" />
+    </radialGradient>
+
+    <clipPath id="iapetusClip">
+      <circle cx="256" cy="256" r="160" />
+    </clipPath>
+  </defs>
+
+  <circle cx="256" cy="256" r="160" fill="url(#iapetusBase)" />
+
+  <g clip-path="url(#iapetusClip)">
+    <ellipse cx="334" cy="256" rx="128" ry="170" fill="url(#iapetusDark)" opacity="0.9" />
+
+    <g fill="#8c7c6b" opacity="0.5">
+      <circle cx="188" cy="180" r="15" />
+      <circle cx="230" cy="300" r="12" />
+      <circle cx="332" cy="202" r="18" />
+      <circle cx="360" cy="312" r="14" />
+    </g>
+
+    <g fill="#f0e8dc" opacity="0.26">
+      <ellipse cx="176" cy="250" rx="42" ry="15" />
+      <ellipse cx="212" cy="356" rx="35" ry="12" />
+    </g>
+
+    <circle cx="256" cy="256" r="160" fill="url(#iapetusShadow)" />
+  </g>
+
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#f2e8db" stroke-width="3.8" opacity="0.18" />
+</svg>

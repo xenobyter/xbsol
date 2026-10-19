@@ -131,7 +131,7 @@ export component MainWindow inherits Window {
             spacing: 8px;
             ComboBox {
                 width: 180px;
-                model: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Io", "Europa", "Ganymede", "Callisto", "Phobos", "Deimos"];
+                model: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Io", "Europa", "Ganymede", "Callisto", "Mimas", "Enceladus", "Tethys", "Dione", "Rhea", "Titan", "Iapetus", "Phobos", "Deimos"];
                 current-value: root.selected_center_name;
                 selected => {
                     root.selected_center_name = self.current-value;

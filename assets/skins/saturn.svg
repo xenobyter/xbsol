@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="saturnGrad" cx="40%" cy="34%" r="62%">
+      <stop offset="0%" stop-color="#f0d9a8" />
+      <stop offset="50%" stop-color="#c8a56c" />
+      <stop offset="85%" stop-color="#876543" />
+      <stop offset="100%" stop-color="#4a341f" />
+    </radialGradient>
+
+    <radialGradient id="saturnShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.25" />
+      <stop offset="88%" stop-color="#000000" stop-opacity="0.86" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.96" />
+    </radialGradient>
+
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f1e6ce" stop-opacity="0.75" />
+      <stop offset="35%" stop-color="#d6c49f" stop-opacity="0.55" />
+      <stop offset="60%" stop-color="#b79f79" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#8a7357" stop-opacity="0.35" />
+    </linearGradient>
+
+    <linearGradient id="ringBackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d8c5a1" stop-opacity="0.26" />
+      <stop offset="50%" stop-color="#b5966c" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#786047" stop-opacity="0.16" />
+    </linearGradient>
+
+    <clipPath id="saturnClip">
+      <circle cx="256" cy="256" r="160" />
+    </clipPath>
+
+    <clipPath id="saturnFrontRingClip">
+      <rect x="0" y="252" width="512" height="260" />
+    </clipPath>
+  </defs>
+
+  <!-- Ringsegmente hinter dem Planeten -->
+  <g opacity="0.95">
+    <path d="M 24 232 q 232 -138 464 0" fill="none" stroke="url(#ringBackGrad)" stroke-width="28" stroke-linecap="round" />
+    <path d="M 42 236 q 214 -124 428 0" fill="none" stroke="#a88c67" stroke-opacity="0.25" stroke-width="14" stroke-linecap="round" />
+    <path d="M 62 242 q 194 -108 388 0" fill="none" stroke="#d7c19a" stroke-opacity="0.22" stroke-width="6" stroke-linecap="round" />
+  </g>
+
+  <circle cx="256" cy="256" r="160" fill="url(#saturnGrad)" />
+
+  <g clip-path="url(#saturnClip)">
+    <g opacity="0.5">
+      <path d="M 86 234 q 170 -92 340 0" fill="none" stroke="url(#ringGrad)" stroke-width="18" stroke-linecap="round" />
+      <path d="M 104 248 q 152 -80 304 0" fill="none" stroke="#c3ad86" stroke-opacity="0.42" stroke-width="9" stroke-linecap="round" />
+      <path d="M 118 260 q 138 -70 276 0" fill="none" stroke="#a58c69" stroke-opacity="0.34" stroke-width="5" stroke-linecap="round" />
+    </g>
+
+    <g fill="#f0e2c7" opacity="0.45">
+      <path d="M 112 165 c 45 -14, 95 -6, 144 -16 c 45 -10, 95 8, 144 16 c -30 12, -82 2, -144 10 c -48 8, -98 -2, -144 -10 z" />
+      <path d="M 100 305 c 55 -14, 106 -5, 156 -16 c 50 -11, 100 8, 156 16 c -34 12, -86 0, -156 10 c -52 8, -103 -2, -156 -10 z" />
+    </g>
+
+    <g fill="#a47f55" opacity="0.5">
+      <ellipse cx="200" cy="210" rx="20" ry="5" />
+      <ellipse cx="330" cy="220" rx="24" ry="6" />
+      <ellipse cx="235" cy="338" rx="22" ry="5" />
+    </g>
+
+    <circle cx="256" cy="256" r="160" fill="url(#saturnShadow)" />
+  </g>
+
+  <!-- Ringsegmente vor dem Planeten -->
+  <g clip-path="url(#saturnFrontRingClip)" opacity="0.95">
+    <path d="M 22 282 q 234 132 468 0" fill="none" stroke="url(#ringGrad)" stroke-width="28" stroke-linecap="round" />
+    <path d="M 40 280 q 216 120 432 0" fill="none" stroke="#d6bf97" stroke-opacity="0.48" stroke-width="13" stroke-linecap="round" />
+    <path d="M 60 278 q 196 106 392 0" fill="none" stroke="#8f7455" stroke-opacity="0.34" stroke-width="6" stroke-linecap="round" />
+  </g>
+
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#fff2d8" stroke-width="4" opacity="0.22" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#c8a56c" stroke-width="1.8" opacity="0.3" />
+</svg>

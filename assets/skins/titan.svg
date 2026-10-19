@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="titanGrad" cx="40%" cy="33%" r="63%">
+      <stop offset="0%" stop-color="#e7bf78" />
+      <stop offset="50%" stop-color="#bc8845" />
+      <stop offset="86%" stop-color="#744726" />
+      <stop offset="100%" stop-color="#3b2212" />
+    </radialGradient>
+
+    <radialGradient id="titanHaze" cx="45%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#ffd9a1" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+
+    <radialGradient id="titanShadow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.28" />
+      <stop offset="88%" stop-color="#000000" stop-opacity="0.86" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.95" />
+    </radialGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="160" fill="#ffc981" opacity="0.12" />
+  <circle cx="256" cy="256" r="160" fill="url(#titanGrad)" />
+
+  <g fill="#8e6137" opacity="0.45">
+    <path d="M 145 205 q 48 -24 86 -8 q 42 18 78 -8 q 40 -28 70 -4 q 20 18 -10 36 q -35 20 -70 14 q -42 -7 -78 6 q -44 15 -76 -4 q -20 -13 0 -32 z" />
+    <path d="M 170 330 q 35 -15 72 -4 q 36 11 66 -8 q 28 -16 50 4 q 12 12 -8 22 q -26 13 -52 10 q -34 -4 -66 7 q -35 11 -60 0 q -20 -9 -2 -31 z" />
+  </g>
+
+  <g fill="#f5d7a7" opacity="0.35">
+    <ellipse cx="210" cy="155" rx="45" ry="14" />
+    <ellipse cx="315" cy="285" rx="34" ry="10" />
+    <ellipse cx="240" cy="365" rx="42" ry="12" />
+  </g>
+
+  <circle cx="256" cy="256" r="160" fill="url(#titanHaze)" />
+  <circle cx="256" cy="256" r="160" fill="url(#titanShadow)" />
+
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#ffe4bf" stroke-width="5" opacity="0.2" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#bc8845" stroke-width="1.6" opacity="0.3" />
+</svg>
