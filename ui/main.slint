@@ -26,6 +26,7 @@ export component MainWindow inherits Window {
 
     in-out property <string> date_text: "No data";
     in-out property <[BodySprite]> body_sprites: [];
+    in-out property <[BodySprite]> trail_sprites: [];
     out property <float> scene_width: scene.width / 1px;
     out property <float> scene_height: scene.height / 1px;
 
@@ -48,6 +49,7 @@ export component MainWindow inherits Window {
     callback zoom_camera(delta_steps: float);
     callback camera_key(action: string);
     callback set_auto_step_days(days: float);
+    callback toggle_trails();
 
     changed scene_width => {
         root.scene_resized(root.scene_width, root.scene_height);
@@ -74,6 +76,7 @@ export component MainWindow inherits Window {
     }
 
     in-out property <bool> auto_play: false;
+    in-out property <bool> show_trails: true;
 
     input_scope := FocusScope {
         width: 100%;
@@ -213,6 +216,15 @@ export component MainWindow inherits Window {
                 }
             }
 
+            for body[i] in root.trail_sprites : Rectangle {
+                width: body.radius_px * 2px;
+                height: body.radius_px * 2px;
+                x: body.x_px * 1px - self.width / 2;
+                y: body.y_px * 1px - self.height / 2;
+                border-radius: self.width / 2;
+                background: body.color;
+            }
+
             for body[i] in root.body_sprites : Rectangle {
                 width: body.radius_px * 2px;
                 height: body.radius_px * 2px;
@@ -249,6 +261,14 @@ export component MainWindow inherits Window {
                     clicked => {
                         root.auto_play = !root.auto_play;
                         root.toggle_auto_play();
+                    }
+                }
+
+                Button {
+                    text: root.show_trails ? "Trails on" : "Trails off";
+                    clicked => {
+                        root.show_trails = !root.show_trails;
+                        root.toggle_trails();
                     }
                 }
             }

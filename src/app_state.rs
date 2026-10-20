@@ -1,4 +1,5 @@
 use crate::model::{BodyId, EphemerisDayIndex, StateVector};
+use std::collections::HashMap;
 
 const AU_KM: f64 = 149_597_870.7;
 const DAY_PROGRESS_RESET: f64 = 0.0;
@@ -24,6 +25,17 @@ pub struct RenderBody {
 #[derive(Debug, Clone)]
 pub struct SceneFrame {
     pub bodies: Vec<RenderBody>,
+    pub trails: Vec<RenderTrailPoint>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RenderTrailPoint {
+    pub x_px: f32,
+    pub y_px: f32,
+    pub radius_px: f32,
+    pub depth: f32,
+    pub color_rgb: (u8, u8, u8),
+    pub alpha: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -80,6 +92,11 @@ const MAX_RADIUS_ZOOM_SCALE: f64 = 6.0;
 const AUTO_STEP_DAYS_MIN: f64 = 0.01;
 const AUTO_STEP_DAYS_MAX: f64 = 1.0;
 const AUTO_STEP_DAYS_DEFAULT: f64 = 0.25;
+const TRAIL_MAX_POINTS_PER_BODY: usize = 360;
+const TRAIL_MIN_POINT_DISTANCE_AU: f64 = 0.00002;
+const TRAIL_POINT_RADIUS_PX: f32 = 0.8;
+const TRAIL_ALPHA_MIN: f32 = 0.16;
+const TRAIL_ALPHA_MAX: f32 = 0.78;
 
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
@@ -178,9 +195,25 @@ pub struct AppState {
     auto_step_days: f64,
     current_day_progress: f64,
     selected_center: BodyId,
+    show_trails: bool,
+    trail_history_au: HashMap<BodyId, Vec<Vec3>>,
 }
 
 impl AppState {
+    fn is_trail_body(body_id: BodyId) -> bool {
+        matches!(
+            body_id,
+            BodyId::Mercury
+                | BodyId::Venus
+                | BodyId::Earth
+                | BodyId::Mars
+                | BodyId::Jupiter
+                | BodyId::Saturn
+                | BodyId::Uranus
+                | BodyId::Neptune
+        )
+    }
+
     fn max_visible_radius_px(body_id: BodyId) -> f64 {
         match body_id {
             BodyId::Sun => 180.0,
@@ -218,7 +251,7 @@ impl AppState {
     }
 
     pub fn new(day_index: EphemerisDayIndex) -> Self {
-        Self {
+        let mut state = Self {
             day_index,
             camera: CameraState::default(),
             camera_target_au: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
@@ -226,7 +259,12 @@ impl AppState {
             auto_step_days: AUTO_STEP_DAYS_DEFAULT,
             current_day_progress: DAY_PROGRESS_RESET,
             selected_center: BodyId::Sun,
-        }
+            show_trails: true,
+            trail_history_au: HashMap::new(),
+        };
+
+        state.sample_trails_at_current_state();
+        state
     }
 
     pub fn auto_step_days(&self) -> f64 {
@@ -239,6 +277,14 @@ impl AppState {
 
     pub fn selected_center(&self) -> BodyId {
         self.selected_center
+    }
+
+    pub fn show_trails(&self) -> bool {
+        self.show_trails
+    }
+
+    pub fn toggle_trails(&mut self) {
+        self.show_trails = !self.show_trails;
     }
 
     pub fn set_center(&mut self, body_id: BodyId) {
@@ -306,11 +352,13 @@ impl AppState {
     pub fn prev_day(&mut self) {
         self.current_day_progress = DAY_PROGRESS_RESET;
         let _ = self.day_index.prev_day();
+        self.sample_trails_at_current_state();
     }
 
     pub fn next_day(&mut self) {
         self.current_day_progress = DAY_PROGRESS_RESET;
         let _ = self.day_index.next_day();
+        self.sample_trails_at_current_state();
     }
 
     pub fn toggle_auto_play(&mut self) {
@@ -336,6 +384,8 @@ impl AppState {
                 break;
             }
         }
+
+        self.sample_trails_at_current_state();
     }
 
     pub fn camera(&self) -> CameraState {
@@ -410,6 +460,66 @@ impl AppState {
         };
 
         Self::body_point_au(self.selected_center, &state)
+    }
+
+    fn absolute_body_point_au(&self, day: &crate::model::DaySnapshot, body_id: BodyId, alpha: f64) -> Option<Vec3> {
+        if body_id == BodyId::Sun {
+            return Some(Vec3 { x: 0.0, y: 0.0, z: 0.0 });
+        }
+
+        let next_day = self.day_index.days.get(self.day_index.current_day_idx + 1);
+        let current_state = day.by_body.get(&body_id);
+        let next_state = next_day.and_then(|d| d.by_body.get(&body_id));
+        let state = Self::interpolate_body_state(current_state, next_state, alpha)?;
+        Some(Self::body_point_au(body_id, &state))
+    }
+
+    fn sample_trails_at_current_state(&mut self) {
+        let Some(day) = self.day_index.current_day() else {
+            return;
+        };
+
+        let alpha = self.current_day_progress.clamp(0.0, 1.0);
+        let mut sampled_points = Vec::new();
+
+        for body_id in [
+            BodyId::Mercury,
+            BodyId::Venus,
+            BodyId::Earth,
+            BodyId::Mars,
+            BodyId::Jupiter,
+            BodyId::Saturn,
+            BodyId::Uranus,
+            BodyId::Neptune,
+        ] {
+            let Some(point) = self.absolute_body_point_au(day, body_id, alpha) else {
+                continue;
+            };
+
+            sampled_points.push((body_id, point));
+        }
+
+        for (body_id, point) in sampled_points {
+            let entry = self.trail_history_au.entry(body_id).or_default();
+            let should_push = match entry.last().copied() {
+                Some(last) => {
+                    let dx = point.x - last.x;
+                    let dy = point.y - last.y;
+                    let dz = point.z - last.z;
+                    let dist2 = dx * dx + dy * dy + dz * dz;
+                    dist2 >= TRAIL_MIN_POINT_DISTANCE_AU * TRAIL_MIN_POINT_DISTANCE_AU
+                }
+                None => true,
+            };
+
+            if should_push {
+                entry.push(point);
+                if entry.len() > TRAIL_MAX_POINTS_PER_BODY {
+                    let overflow = entry.len() - TRAIL_MAX_POINTS_PER_BODY;
+                    entry.drain(0..overflow);
+                }
+            }
+        }
     }
 
     fn projection_params(camera: CameraState, width_px: f32, height_px: f32) -> ProjectionParams {
@@ -517,24 +627,7 @@ impl AppState {
         width_px: f32,
         height_px: f32,
     ) -> Option<RenderBody> {
-        let rel = point - basis.camera_pos;
-        let cam_x = rel.dot(basis.right);
-        let cam_y = rel.dot(basis.up);
-        let cam_z = rel.dot(basis.forward);
-
-        if cam_z <= params.near || cam_z >= params.far {
-            return None;
-        }
-
-        let x_ndc = cam_x / (cam_z * params.tan_half_fov * params.aspect);
-        let y_ndc = cam_y / (cam_z * params.tan_half_fov);
-
-        if !x_ndc.is_finite() || !y_ndc.is_finite() {
-            return None;
-        }
-
-        let x_px = ((x_ndc * NDC_TO_PIXEL_SCALE + NDC_TO_PIXEL_SCALE) * width_px as f64) as f32;
-        let y_px = ((NDC_TO_PIXEL_SCALE - y_ndc * NDC_TO_PIXEL_SCALE) * height_px as f64) as f32;
+        let (x_px, y_px, cam_z) = Self::project_point(point, basis, params, width_px, height_px)?;
 
         let radius_au = body_id.radius_km() / AU_KM;
         let zoom_scale = zoom_scale.clamp(MIN_RADIUS_ZOOM_SCALE, MAX_RADIUS_ZOOM_SCALE);
@@ -554,9 +647,81 @@ impl AppState {
         })
     }
 
+    fn project_point(point: Vec3, basis: CameraBasis, params: ProjectionParams, width_px: f32, height_px: f32) -> Option<(f32, f32, f64)> {
+        let rel = point - basis.camera_pos;
+        let cam_x = rel.dot(basis.right);
+        let cam_y = rel.dot(basis.up);
+        let cam_z = rel.dot(basis.forward);
+
+        if cam_z <= params.near || cam_z >= params.far {
+            return None;
+        }
+
+        let x_ndc = cam_x / (cam_z * params.tan_half_fov * params.aspect);
+        let y_ndc = cam_y / (cam_z * params.tan_half_fov);
+
+        if !x_ndc.is_finite() || !y_ndc.is_finite() {
+            return None;
+        }
+
+        let x_px = ((x_ndc * NDC_TO_PIXEL_SCALE + NDC_TO_PIXEL_SCALE) * width_px as f64) as f32;
+        let y_px = ((NDC_TO_PIXEL_SCALE - y_ndc * NDC_TO_PIXEL_SCALE) * height_px as f64) as f32;
+
+        Some((x_px, y_px, cam_z))
+    }
+
+    fn build_trails_for_frame(
+        &self,
+        center_point: Vec3,
+        basis: CameraBasis,
+        params: ProjectionParams,
+        width_px: f32,
+        height_px: f32,
+    ) -> Vec<RenderTrailPoint> {
+        if !self.show_trails {
+            return Vec::new();
+        }
+
+        let mut trails = Vec::new();
+
+        for (&body_id, points) in &self.trail_history_au {
+            if !Self::is_trail_body(body_id) || points.is_empty() {
+                continue;
+            }
+
+            let body_color = body_id.color_rgb();
+            let denom = (points.len().saturating_sub(1).max(1)) as f32;
+
+            for (idx, absolute_point) in points.iter().copied().enumerate() {
+                let relative_point = absolute_point - center_point;
+                let Some((x_px, y_px, cam_z)) = Self::project_point(relative_point, basis, params, width_px, height_px) else {
+                    continue;
+                };
+
+                let t = idx as f32 / denom;
+                let alpha = TRAIL_ALPHA_MIN + (TRAIL_ALPHA_MAX - TRAIL_ALPHA_MIN) * t;
+
+                trails.push(RenderTrailPoint {
+                    x_px,
+                    y_px,
+                    radius_px: TRAIL_POINT_RADIUS_PX,
+                    depth: cam_z as f32,
+                    color_rgb: body_color,
+                    alpha,
+                });
+            }
+        }
+
+        trails.sort_by(|a, b| b.depth.partial_cmp(&a.depth).unwrap_or(std::cmp::Ordering::Equal));
+        trails
+    }
+
     pub fn build_scene_frame(&self, width_px: f32, height_px: f32) -> SceneFrame {
         let Some(day) = self.day_index.current_day() else {
-            return SceneFrame { bodies: Vec::new() };
+            return SceneFrame {
+                bodies: Vec::new(),
+                trails: Vec::new(),
+            };
         };
 
         let alpha = self.current_day_progress.clamp(0.0, 1.0);
@@ -564,6 +729,7 @@ impl AppState {
         let basis = Self::camera_basis(self.camera, self.camera_target_au);
         let params = Self::projection_params(self.camera, width_px, height_px);
         let zoom_scale = (DEFAULT_DISTANCE_AU as f64 / self.camera.distance_au as f64).clamp(MIN_RADIUS_ZOOM_SCALE, MAX_RADIUS_ZOOM_SCALE);
+        let center_point = self.selected_center_point_au(day, alpha);
         let world_bodies = self.world_bodies_for_frame(day, alpha);
 
         let mut projected = Vec::new();
@@ -576,6 +742,8 @@ impl AppState {
 
         projected.sort_by(|a, b| b.depth.partial_cmp(&a.depth).unwrap_or(std::cmp::Ordering::Equal));
 
-        SceneFrame { bodies: projected }
+        let trails = self.build_trails_for_frame(center_point, basis, params, width_px, height_px);
+
+        SceneFrame { bodies: projected, trails }
     }
 }

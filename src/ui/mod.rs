@@ -25,6 +25,7 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
         ui.set_camera_fov_deg(camera.fov_deg);
         ui.set_selected_center_name(state.selected_center().name().to_string().into());
         ui.set_auto_step_days(state.auto_step_days() as f32);
+        ui.set_show_trails(state.show_trails());
     }
 
     refresh_scene(&ui, &app_state.borrow(), &skin_cache);
@@ -133,6 +134,19 @@ pub fn run_ui(day_index: EphemerisDayIndex) -> Result<(), slint::PlatformError> 
     let state_step = Rc::clone(&app_state);
     ui.on_set_auto_step_days(move |days| {
         state_step.borrow_mut().set_auto_step_days(days as f64);
+    });
+
+    let weak_trails = ui.as_weak();
+    let state_trails = Rc::clone(&app_state);
+    let cache_trails = Rc::clone(&skin_cache);
+    ui.on_toggle_trails(move || {
+        let mut state = state_trails.borrow_mut();
+        state.toggle_trails();
+
+        if let Some(ui) = weak_trails.upgrade() {
+            ui.set_show_trails(state.show_trails());
+            refresh_scene(&ui, &state, &cache_trails);
+        }
     });
 
     let weak_resize = ui.as_weak();
@@ -252,8 +266,29 @@ fn refresh_scene(ui: &MainWindow, state: &AppState, skin_cache: &Rc<RefCell<Skin
         })
         .collect();
 
+    let trails: Vec<BodySprite> = frame
+        .trails
+        .into_iter()
+        .map(|trail| BodySprite {
+            name: "trail".into(),
+            texture: Image::default(),
+            has_texture: false,
+            x_px: trail.x_px,
+            y_px: trail.y_px,
+            radius_px: trail.radius_px,
+            color: Color::from_argb_u8(
+                (trail.alpha.clamp(0.0, 1.0) * 255.0) as u8,
+                trail.color_rgb.0,
+                trail.color_rgb.1,
+                trail.color_rgb.2,
+            ),
+        })
+        .collect();
+
     let model = Rc::new(VecModel::from(sprites));
     ui.set_body_sprites(ModelRc::from(model));
+    let trail_model = Rc::new(VecModel::from(trails));
+    ui.set_trail_sprites(ModelRc::from(trail_model));
 }
 
 fn skin_tier_for_radius(radius_px: f32) -> &'static str {
