@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="neptuneBase" cx="36%" cy="30%" r="68%">
+      <stop offset="0%" stop-color="#9fc3ff" />
+      <stop offset="42%" stop-color="#5b86e3" />
+      <stop offset="78%" stop-color="#2a4eb2" />
+      <stop offset="100%" stop-color="#122966" />
+    </radialGradient>
+
+    <radialGradient id="neptuneShadow" cx="33%" cy="28%" r="74%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="62%" stop-color="#000000" stop-opacity="0.2" />
+      <stop offset="88%" stop-color="#000000" stop-opacity="0.62" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.86" />
+    </radialGradient>
+
+    <linearGradient id="neptuneTerminator" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cfe2ff" stop-opacity="0.2" />
+      <stop offset="45%" stop-color="#6b93ef" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#0d1d4c" stop-opacity="0.42" />
+    </linearGradient>
+
+    <clipPath id="neptuneClip">
+      <circle cx="256" cy="256" r="160" />
+    </clipPath>
+  </defs>
+
+  <circle cx="256" cy="256" r="160" fill="url(#neptuneBase)" />
+
+  <g clip-path="url(#neptuneClip)">
+    <g fill="#a7c5ff" opacity="0.26">
+      <path d="M 76 178 c 54 -20, 110 -11, 180 -21 c 68 -10, 123 6, 180 21 c -44 16, -100 8, -180 16 c -74 8, -132 -2, -180 -16 z" />
+      <path d="M 68 224 c 64 -18, 124 -8, 188 -18 c 72 -11, 134 7, 188 18 c -46 16, -104 8, -188 17 c -78 9, -136 -2, -188 -17 z" />
+      <path d="M 62 270 c 66 -16, 130 -7, 194 -16 c 74 -10, 138 8, 194 16 c -48 15, -108 8, -194 15 c -78 8, -140 -1, -194 -15 z" />
+      <path d="M 66 318 c 58 -14, 121 -6, 190 -15 c 69 -9, 132 8, 190 15 c -45 14, -103 8, -190 14 c -76 7, -136 -1, -190 -14 z" />
+    </g>
+
+    <g fill="#4d73d8" opacity="0.38">
+      <path d="M 82 200 c 70 14, 126 -10, 174 -8 c 52 2, 118 20, 174 8 c -38 20, -108 10, -174 14 c -70 4, -136 10, -174 -14 z" />
+      <path d="M 78 290 c 68 15, 126 -10, 178 -8 c 54 1, 114 21, 178 8 c -42 20, -110 10, -178 14 c -70 4, -138 10, -178 -14 z" />
+    </g>
+
+    <path d="M 136 336 c 26 -16, 48 -22, 68 -18 c 16 4, 28 14, 34 28 c -12 18, -30 30, -52 34 c -22 3, -40 -5, -50 -18 c -9 -12, -9 -19, 0 -26 z" fill="#243f96" opacity="0.55" />
+    <ellipse cx="164" cy="352" rx="18" ry="8" fill="#88a7f1" opacity="0.45" />
+
+    <circle cx="256" cy="256" r="160" fill="url(#neptuneTerminator)" />
+    <circle cx="256" cy="256" r="160" fill="url(#neptuneShadow)" />
+  </g>
+
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#d7e5ff" stroke-width="3.8" opacity="0.24" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#5b86e3" stroke-width="1.8" opacity="0.34" />
+</svg>
