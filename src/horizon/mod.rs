@@ -2,8 +2,8 @@
 //!
 //! Dieses Modul bietet Funktionen zum Abrufen und Aufbereiten von Ephemeriden-Daten
 //! (Positions- und Geschwindigkeitsvektoren) für Himmelskörper im Sonnensystem.
-use crate::model::{BodyMeta, EphemerisRecord, StateVector};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use crate::model::{BODIES, BodyMeta, EphemerisRecord, EphemerisTable, StateVector};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use serde::Deserialize;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -14,6 +14,39 @@ const HORIZONS_STEP_SIZE: &str = "1 d";
 const HORIZONS_START_TIME: &str = "2026-01-01";
 const HORIZONS_STOP_TIME: &str = "2026-12-31";
 const HORIZONS_CACHE_DIR: &str = "cache/horizons";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HorizonsDateRange {
+    start: NaiveDate,
+    stop: NaiveDate,
+}
+
+impl HorizonsDateRange {
+    pub fn from_iso_dates(start: &str, stop: &str) -> Result<Self, String> {
+        let start = NaiveDate::parse_from_str(start, "%Y-%m-%d").map_err(|error| format!("Ungültiges Startdatum: {error}"))?;
+        let stop = NaiveDate::parse_from_str(stop, "%Y-%m-%d").map_err(|error| format!("Ungültiges Enddatum: {error}"))?;
+
+        if start > stop {
+            return Err("Das Startdatum muss vor oder am Enddatum liegen".to_string());
+        }
+
+        Ok(Self { start, stop })
+    }
+
+    pub fn start_time(self) -> String {
+        self.start.format("%Y-%m-%d").to_string()
+    }
+
+    pub fn stop_time(self) -> String {
+        self.stop.format("%Y-%m-%d").to_string()
+    }
+}
+
+impl Default for HorizonsDateRange {
+    fn default() -> Self {
+        Self::from_iso_dates(HORIZONS_START_TIME, HORIZONS_STOP_TIME).expect("Default Horizons date range must be valid")
+    }
+}
 
 #[derive(Debug)]
 enum HorizonsParseError {
@@ -71,33 +104,52 @@ struct HorizonsJsonResponse {
 /// * Der HTTP-Request fehlschlägt.
 /// * Die NASA-API eine Fehlermeldung im Antworttext zurückliefert.
 /// * Das Parsen des Textinhalts oder der Datumsangaben fehlschlägt.
-pub async fn get_ephemerides(client: &reqwest::Client, body: BodyMeta) -> Result<Vec<EphemerisRecord>, Box<dyn std::error::Error>> {
+pub async fn get_ephemerides(
+    client: &reqwest::Client,
+    body: BodyMeta,
+    date_range: HorizonsDateRange,
+) -> Result<Vec<EphemerisRecord>, Box<dyn std::error::Error + Send + Sync>> {
     let command = body.command();
 
-    if let Some(cached_json) = load_cached_horizons_data(command)? {
+    if let Some(cached_json) = load_cached_horizons_data(command, date_range)? {
         log::info!(
             "Nutze lokalen Horizons-Cache für COMMAND={} im Zeitraum {} bis {}",
             command,
-            HORIZONS_START_TIME,
-            HORIZONS_STOP_TIME
+            date_range.start_time(),
+            date_range.stop_time()
         );
         let parsed_data = parse_horizons_response(&cached_json, body)?;
         return Ok(parsed_data);
     }
 
-    let data = get_horizons_data(client, command).await?;
+    let data = get_horizons_data(client, command, date_range).await?;
     // Mit dem '?' extrahieren wir das Result aus dem Parser und werfen Fehler hoch
     let parsed_data = parse_horizons_response(&data, body)?;
 
-    if let Err(error) = save_cached_horizons_data(command, &data) {
+    if let Err(error) = save_cached_horizons_data(command, date_range, &data) {
         log::warn!("Konnte Horizons-Cache nicht speichern für COMMAND={}: {}", command, error);
     }
 
     Ok(parsed_data)
 }
 
-async fn get_horizons_data(client: &reqwest::Client, command: &str) -> Result<String, reqwest::Error> {
+pub async fn get_ephemerides_for_bodies(
+    client: &reqwest::Client,
+    date_range: HorizonsDateRange,
+) -> Result<EphemerisTable, Box<dyn std::error::Error + Send + Sync>> {
+    let mut table = EphemerisTable::new();
+    for body in BODIES {
+        let records = get_ephemerides(client, *body, date_range).await?;
+        log::info!("Horizons-Daten für {}: {} Datensätze", body.body_id.name(), records.len());
+        table.extend(records);
+    }
+    Ok(table)
+}
+
+async fn get_horizons_data(client: &reqwest::Client, command: &str, date_range: HorizonsDateRange) -> Result<String, reqwest::Error> {
     let url = "https://ssd.jpl.nasa.gov/api/horizons.api";
+    let start_time = date_range.start_time();
+    let stop_time = date_range.stop_time();
 
     let params = [
         ("format", "json"),
@@ -106,8 +158,8 @@ async fn get_horizons_data(client: &reqwest::Client, command: &str) -> Result<St
         ("MAKE_EPHEM", "YES"),
         ("OBJ_DATA", "NO"),
         ("EPHEM_TYPE", "VECTORS"),
-        ("START_TIME", HORIZONS_START_TIME),
-        ("STOP_TIME", HORIZONS_STOP_TIME),
+        ("START_TIME", &start_time),
+        ("STOP_TIME", &stop_time),
         ("STEP_SIZE", HORIZONS_STEP_SIZE),
         ("VEC_TABLE", "2"),
         ("OUT_UNITS", "KM-S"),
@@ -120,8 +172,8 @@ async fn get_horizons_data(client: &reqwest::Client, command: &str) -> Result<St
     Ok(text)
 }
 
-fn load_cached_horizons_data(command: &str) -> Result<Option<String>, std::io::Error> {
-    let path = cache_file_path(command);
+fn load_cached_horizons_data(command: &str, date_range: HorizonsDateRange) -> Result<Option<String>, std::io::Error> {
+    let path = cache_file_path(command, date_range);
     if !path.exists() {
         return Ok(None);
     }
@@ -130,20 +182,20 @@ fn load_cached_horizons_data(command: &str) -> Result<Option<String>, std::io::E
     Ok(Some(content))
 }
 
-fn save_cached_horizons_data(command: &str, content: &str) -> Result<(), std::io::Error> {
-    let path = cache_file_path(command);
+fn save_cached_horizons_data(command: &str, date_range: HorizonsDateRange, content: &str) -> Result<(), std::io::Error> {
+    let path = cache_file_path(command, date_range);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(path, content)
 }
 
-fn cache_file_path(command: &str) -> PathBuf {
+fn cache_file_path(command: &str, date_range: HorizonsDateRange) -> PathBuf {
     Path::new(HORIZONS_CACHE_DIR).join(format!(
         "{}_{}_{}.json",
         sanitize_for_file_name(command),
-        sanitize_for_file_name(HORIZONS_START_TIME),
-        sanitize_for_file_name(HORIZONS_STOP_TIME),
+        sanitize_for_file_name(&date_range.start_time()),
+        sanitize_for_file_name(&date_range.stop_time()),
     ))
 }
 
@@ -154,7 +206,7 @@ fn sanitize_for_file_name(value: &str) -> String {
         .collect()
 }
 
-fn parse_horizons_response(json_data: &str, body: BodyMeta) -> Result<Vec<EphemerisRecord>, Box<dyn std::error::Error>> {
+fn parse_horizons_response(json_data: &str, body: BodyMeta) -> Result<Vec<EphemerisRecord>, Box<dyn std::error::Error + Send + Sync>> {
     let response: HorizonsJsonResponse = serde_json::from_str(json_data)?;
     let command = body.command();
 
@@ -306,6 +358,23 @@ mod tests {
     use super::*;
     use crate::model::BodyId;
     use chrono::NaiveDate;
+
+    #[test]
+    fn test_date_range_validation_and_cache_key() {
+        let default_range = HorizonsDateRange::default();
+        assert_eq!(default_range.start_time(), HORIZONS_START_TIME);
+        assert_eq!(default_range.stop_time(), HORIZONS_STOP_TIME);
+
+        assert!(HorizonsDateRange::from_iso_dates("2026-02-30", "2026-03-01").is_err());
+        assert!(HorizonsDateRange::from_iso_dates("2026-03-02", "2026-03-01").is_err());
+
+        let other_range = HorizonsDateRange::from_iso_dates("2026-02-01", "2026-02-28").unwrap();
+        assert_ne!(cache_file_path("399", default_range), cache_file_path("399", other_range));
+        assert_eq!(
+            cache_file_path("399", default_range),
+            Path::new(HORIZONS_CACHE_DIR).join("399_2026_01_01_2026_12_31.json")
+        );
+    }
 
     // Hilfs-Funktion, um eine minimale, valide NASA-Antwort zu simulieren
     fn create_mock_json(result_text: &str) -> String {

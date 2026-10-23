@@ -1,4 +1,4 @@
-import { VerticalBox, HorizontalBox, Button, ComboBox, Slider } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, ComboBox, Slider, LineEdit } from "std-widgets.slint";
 
 struct BodySprite {
     name: string,
@@ -13,9 +13,9 @@ struct BodySprite {
 export component MainWindow inherits Window {
     title: "xbsol";
     min-width: 960px;
-    min-height: 700px;
+    min-height: 760px;
     preferred-width: 960px;
-    preferred-height: 700px;
+    preferred-height: 760px;
     private property <duration> auto_tick_interval: 50ms;
     private property <length> layout_padding: 16px;
     private property <length> layout_spacing: 10px;
@@ -25,6 +25,10 @@ export component MainWindow inherits Window {
     private property <length> scene_border_width: 1px;
 
     in-out property <string> date_text: "No data";
+    in-out property <string> start_date: "2026-01-01";
+    in-out property <string> stop_date: "2026-12-31";
+    in-out property <string> range_status: "";
+    in-out property <bool> range_loading: false;
     in-out property <[BodySprite]> body_sprites: [];
     in-out property <[BodySprite]> trail_sprites: [];
     out property <float> scene_width: scene.width / 1px;
@@ -50,6 +54,7 @@ export component MainWindow inherits Window {
     callback camera_key(action: string);
     callback set_auto_step_days(days: float);
     callback toggle_trails();
+    callback load_date_range(start: string, stop: string);
 
     changed scene_width => {
         root.scene_resized(root.scene_width, root.scene_height);
@@ -128,6 +133,34 @@ export component MainWindow inherits Window {
             text: root.date_text;
             horizontal-alignment: center;
             font-size: 20px;
+        }
+
+        HorizontalBox {
+            spacing: 8px;
+            Text { text: "Horizons"; vertical-alignment: center; }
+            Text { text: "Von"; vertical-alignment: center; }
+            LineEdit {
+                width: 150px;
+                text <=> root.start_date;
+                placeholder-text: "YYYY-MM-DD";
+            }
+            Text { text: "Bis"; vertical-alignment: center; }
+            LineEdit {
+                width: 150px;
+                text <=> root.stop_date;
+                placeholder-text: "YYYY-MM-DD";
+            }
+            Button {
+                text: root.range_loading ? "Lädt..." : "Laden";
+                enabled: !root.range_loading;
+                clicked => { root.load_date_range(root.start_date, root.stop_date); }
+            }
+        }
+
+        Text {
+            text: root.range_status;
+            color: #d7a34a;
+            font-size: 12px;
         }
 
         HorizontalBox {

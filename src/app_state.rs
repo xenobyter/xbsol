@@ -267,6 +267,14 @@ impl AppState {
         state
     }
 
+    pub fn replace_day_index(&mut self, day_index: EphemerisDayIndex) {
+        self.day_index = day_index;
+        self.auto_play = false;
+        self.current_day_progress = DAY_PROGRESS_RESET;
+        self.trail_history_au.clear();
+        self.sample_trails_at_current_state();
+    }
+
     pub fn auto_step_days(&self) -> f64 {
         self.auto_step_days
     }
