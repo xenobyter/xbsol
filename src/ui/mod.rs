@@ -6,8 +6,9 @@ mod scene;
 
 use crate::app_state::AppState;
 use crate::horizon::HorizonsDateRange;
-use crate::model::EphemerisDayIndex;
+use crate::model::{BODIES, EphemerisDayIndex};
 use scene::SkinCache;
+use slint::{ModelRc, SharedString, VecModel};
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokio::runtime::Handle;
@@ -51,6 +52,11 @@ pub fn run_ui(
 }
 
 fn initialize_window(ui: &MainWindow, state: &AppState, date_range: HorizonsDateRange) {
+    let body_names: Vec<SharedString> = BODIES
+        .iter()
+        .map(|body| body.body_id.name().into())
+        .collect();
+    ui.set_body_names(ModelRc::from(Rc::new(VecModel::from(body_names))));
     ui.set_start_date(date_range.start_time().into());
     ui.set_stop_date(date_range.stop_time().into());
 

@@ -29,6 +29,7 @@ export component MainWindow inherits Window {
     in-out property <string> stop_date: "2026-12-31";
     in-out property <string> range_status: "";
     in-out property <bool> range_loading: false;
+    in-out property <[string]> body_names: [];
     in-out property <[BodySprite]> body_sprites: [];
     in-out property <[BodySprite]> trail_sprites: [];
     out property <float> scene_width: scene.width / 1px;
@@ -167,7 +168,7 @@ export component MainWindow inherits Window {
             spacing: 8px;
             ComboBox {
                 width: 180px;
-                model: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Io", "Europa", "Ganymede", "Callisto", "Mimas", "Enceladus", "Tethys", "Dione", "Rhea", "Titan", "Iapetus", "Miranda", "Ariel", "Umbriel", "Titania", "Oberon", "Triton", "Nereid", "Proteus", "Phobos", "Deimos"];
+                model: root.body_names;
                 current-value: root.selected_center_name;
                 selected => {
                     root.selected_center_name = self.current-value;

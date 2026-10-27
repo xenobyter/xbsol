@@ -109,6 +109,13 @@ impl BodyId {
         }
     }
 
+    pub fn from_name(name: &str) -> Option<Self> {
+        BODIES
+            .iter()
+            .map(|body| body.body_id)
+            .find(|body_id| body_id.name() == name)
+    }
+
     pub const fn radius_km(self) -> f64 {
         match self {
             BodyId::Sun => 696_340.0,
@@ -300,6 +307,17 @@ pub const BODIES: &[BodyMeta] = &[
     BodyMeta { body_id: BodyId::Phobos },
     BodyMeta { body_id: BodyId::Deimos },
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::BodyId;
+
+    #[test]
+    fn resolves_body_names() {
+        assert_eq!(BodyId::from_name("Earth"), Some(BodyId::Earth));
+        assert_eq!(BodyId::from_name(" unknown "), None);
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct StateVector {

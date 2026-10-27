@@ -1,5 +1,6 @@
 use super::super::{MainWindow, scene, set_camera_properties};
 use crate::app_state::AppState;
+use crate::model::BodyId;
 use crate::ui::scene::SkinCache;
 use slint::ComponentHandle;
 use std::cell::RefCell;
@@ -20,27 +21,38 @@ fn register_day_navigation(
     app_state: &Rc<RefCell<AppState>>,
     skin_cache: &Rc<RefCell<SkinCache>>,
 ) {
-    let weak_prev = ui.as_weak();
-    let state_prev = Rc::clone(app_state);
-    let cache_prev = Rc::clone(skin_cache);
-    ui.on_prev_day(move || {
-        state_prev.borrow_mut().prev_day();
-        if let Some(ui) = weak_prev.upgrade() {
-            ui.set_date_text(state_prev.borrow().date_text().into());
-            scene::refresh_scene(&ui, &state_prev.borrow(), &cache_prev);
-        }
-    });
+    register_day_change(ui, app_state, skin_cache, AppState::prev_day, true);
+    register_day_change(ui, app_state, skin_cache, AppState::next_day, false);
+}
 
-    let weak_next = ui.as_weak();
-    let state_next = Rc::clone(app_state);
-    let cache_next = Rc::clone(skin_cache);
-    ui.on_next_day(move || {
-        state_next.borrow_mut().next_day();
-        if let Some(ui) = weak_next.upgrade() {
-            ui.set_date_text(state_next.borrow().date_text().into());
-            scene::refresh_scene(&ui, &state_next.borrow(), &cache_next);
+fn register_day_change(
+    ui: &MainWindow,
+    app_state: &Rc<RefCell<AppState>>,
+    skin_cache: &Rc<RefCell<SkinCache>>,
+    change_day: fn(&mut AppState),
+    previous: bool,
+) {
+    let weak_ui = ui.as_weak();
+    let state = Rc::clone(app_state);
+    let cache = Rc::clone(skin_cache);
+    let handler = move || {
+        change_day(&mut state.borrow_mut());
+        if let Some(ui) = weak_ui.upgrade() {
+            let state = state.borrow();
+            refresh_date_and_scene(&ui, &state, &cache);
         }
-    });
+    };
+
+    if previous {
+        ui.on_prev_day(handler);
+    } else {
+        ui.on_next_day(handler);
+    }
+}
+
+fn refresh_date_and_scene(ui: &MainWindow, state: &AppState, cache: &Rc<RefCell<SkinCache>>) {
+    ui.set_date_text(state.date_text().into());
+    scene::refresh_scene(ui, state, cache);
 }
 
 fn register_playback(
@@ -65,10 +77,8 @@ fn register_playback(
             let mut state = state_tick.borrow_mut();
             let dt_days = state.auto_step_days();
             state.advance_auto_step(dt_days);
-            let current = state.date_text();
             if let Some(ui) = weak_tick.upgrade() {
-                ui.set_date_text(current.into());
-                scene::refresh_scene(&ui, &state, &cache_tick);
+                refresh_date_and_scene(&ui, &state, &cache_tick);
             }
         }
     });
@@ -88,48 +98,15 @@ fn register_center_selection(
     let state_center = Rc::clone(app_state);
     let cache_select_center = Rc::clone(skin_cache);
     ui.on_select_center(move |name| {
-        let mut state = state_center.borrow_mut();
-        let body_name = name.trim();
-        let target = match body_name {
-            "Sun" => crate::model::BodyId::Sun,
-            "Mercury" => crate::model::BodyId::Mercury,
-            "Venus" => crate::model::BodyId::Venus,
-            "Earth" => crate::model::BodyId::Earth,
-            "Moon" => crate::model::BodyId::Moon,
-            "Mars" => crate::model::BodyId::Mars,
-            "Jupiter" => crate::model::BodyId::Jupiter,
-            "Saturn" => crate::model::BodyId::Saturn,
-            "Uranus" => crate::model::BodyId::Uranus,
-            "Neptune" => crate::model::BodyId::Neptune,
-            "Io" => crate::model::BodyId::Io,
-            "Europa" => crate::model::BodyId::Europa,
-            "Ganymede" => crate::model::BodyId::Ganymede,
-            "Callisto" => crate::model::BodyId::Callisto,
-            "Mimas" => crate::model::BodyId::Mimas,
-            "Enceladus" => crate::model::BodyId::Enceladus,
-            "Tethys" => crate::model::BodyId::Tethys,
-            "Dione" => crate::model::BodyId::Dione,
-            "Rhea" => crate::model::BodyId::Rhea,
-            "Titan" => crate::model::BodyId::Titan,
-            "Iapetus" => crate::model::BodyId::Iapetus,
-            "Miranda" => crate::model::BodyId::Miranda,
-            "Ariel" => crate::model::BodyId::Ariel,
-            "Umbriel" => crate::model::BodyId::Umbriel,
-            "Titania" => crate::model::BodyId::Titania,
-            "Oberon" => crate::model::BodyId::Oberon,
-            "Triton" => crate::model::BodyId::Triton,
-            "Nereid" => crate::model::BodyId::Nereid,
-            "Proteus" => crate::model::BodyId::Proteus,
-            "Phobos" => crate::model::BodyId::Phobos,
-            "Deimos" => crate::model::BodyId::Deimos,
-            _ => crate::model::BodyId::Sun,
+        let Some(target) = BodyId::from_name(name.trim()) else {
+            return;
         };
-
+        let mut state = state_center.borrow_mut();
         state.set_center(target);
 
         if let Some(ui) = weak_select_center.upgrade() {
             let camera = state.camera();
-            ui.set_selected_center_name(target.name().to_string().into());
+            ui.set_selected_center_name(target.name().into());
             set_camera_properties(&ui, camera);
             scene::refresh_scene(&ui, &state, &cache_select_center);
         }
