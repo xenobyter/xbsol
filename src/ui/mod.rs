@@ -34,7 +34,7 @@ pub fn run_ui(
 ) -> Result<(), slint::PlatformError> {
     let ui = MainWindow::new()?;
     let app_state = Rc::new(RefCell::new(AppState::new(day_index)));
-    let skin_cache = Rc::new(RefCell::new(SkinCache::new()));
+    let skin_cache = Rc::new(RefCell::new(SkinCache::default()));
     let active_range = Rc::new(RefCell::new(date_range));
 
     initialize_window(&ui, &app_state.borrow(), date_range);
