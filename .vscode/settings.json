@@ -6,7 +6,11 @@
         "ephemerides",
         "ephems",
         "nasa",
-        "parst"
+        "parst",
+        "Plattformfehler",
+        "slint",
+        "Slint",
+        "Szenendarstellung"
     ],
     "[rust]": {
         "editor.defaultFormatter": "rust-lang.rust-analyzer"

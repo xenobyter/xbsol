@@ -1,17 +1,30 @@
+//! Slint-Bootstrap: initialisiert das Hauptfenster und verbindet es mit App-State,
+//! Szenendarstellung und UI-Handlern.
+
+mod handlers;
+mod scene;
+
 use crate::app_state::AppState;
-use crate::horizon::{HorizonsDateRange, get_ephemerides_for_bodies};
+use crate::horizon::HorizonsDateRange;
 use crate::model::EphemerisDayIndex;
-use slint::{Color, Image, ModelRc, VecModel};
+use scene::SkinCache;
 use std::cell::RefCell;
-use std::collections::HashMap;
-use std::path::PathBuf;
 use std::rc::Rc;
 use tokio::runtime::Handle;
 
 slint::include_modules!();
 
-type SkinCache = HashMap<String, Option<Image>>;
-
+/// Initialisiert das Hauptfenster und startet die Slint-Ereignisschleife.
+///
+/// Der vorberechnete Tagesindex bildet den Startzustand. `date_range` wird im
+/// Fenster angezeigt und dient als Vergleichswert für spätere Bereichswechsel.
+/// HTTP-Client und Tokio-Handle werden von den registrierten Handlern für
+/// asynchrone Horizons-Abfragen weiterverwendet.
+///
+/// # Errors
+///
+/// Gibt Plattformfehler zurück, wenn das Hauptfenster nicht erstellt oder die
+/// Ereignisschleife nicht gestartet werden kann.
 pub fn run_ui(
     day_index: EphemerisDayIndex,
     date_range: HorizonsDateRange,
@@ -23,396 +36,34 @@ pub fn run_ui(
     let skin_cache = Rc::new(RefCell::new(SkinCache::new()));
     let active_range = Rc::new(RefCell::new(date_range));
 
-    ui.set_start_date(date_range.start_time().into());
-    ui.set_stop_date(date_range.stop_time().into());
-
-    {
-        let state = app_state.borrow();
-        ui.set_date_text(state.date_text().into());
-        let camera = state.camera();
-        ui.set_camera_azimuth_deg(camera.azimuth_deg);
-        ui.set_camera_elevation_deg(camera.elevation_deg);
-        ui.set_camera_distance_au(camera.distance_au);
-        ui.set_camera_fov_deg(camera.fov_deg);
-        ui.set_selected_center_name(state.selected_center().name().to_string().into());
-        ui.set_auto_step_days(state.auto_step_days() as f32);
-        ui.set_show_trails(state.show_trails());
-    }
-
-    refresh_scene(&ui, &app_state.borrow(), &skin_cache);
-
-    let weak_load = ui.as_weak();
-    let state_load = Rc::clone(&app_state);
-    let cache_load = Rc::clone(&skin_cache);
-    let active_range_load = Rc::clone(&active_range);
-    ui.on_load_date_range(move |start, stop| {
-        let requested_range = match HorizonsDateRange::from_iso_dates(start.as_str(), stop.as_str()) {
-            Ok(date_range) => date_range,
-            Err(error) => {
-                if let Some(ui) = weak_load.upgrade() {
-                    ui.set_range_status(error.into());
-                }
-                return;
-            }
-        };
-
-        if *active_range_load.borrow() == requested_range {
-            if let Some(ui) = weak_load.upgrade() {
-                ui.set_range_status("Der Zeitraum ist unverändert.".into());
-            }
-            return;
-        }
-
-        let Some(ui) = weak_load.upgrade() else {
-            return;
-        };
-        ui.set_range_loading(true);
-        ui.set_range_status("Horizons-Daten werden geladen...".into());
-
-        let runtime = runtime.clone();
-        let client = client.clone();
-        let weak_ui = ui.as_weak();
-        let state = Rc::clone(&state_load);
-        let skin_cache = Rc::clone(&cache_load);
-        let active_range = Rc::clone(&active_range_load);
-
-        if let Err(error) = slint::spawn_local(async move {
-            let result = runtime
-                .spawn(async move { get_ephemerides_for_bodies(&client, requested_range).await })
-                .await;
-            let result = match result {
-                Ok(Ok(table)) => Ok(table),
-                Ok(Err(error)) => Err(error.to_string()),
-                Err(error) => Err(error.to_string()),
-            };
-
-            let Some(ui) = weak_ui.upgrade() else {
-                return;
-            };
-            ui.set_range_loading(false);
-
-            match result {
-                Ok(table) => match crate::settings::save_date_range(requested_range) {
-                    Ok(()) => {
-                        *active_range.borrow_mut() = requested_range;
-                        let mut app_state = state.borrow_mut();
-                        app_state.replace_day_index(table.build_day_index());
-                        ui.set_date_text(app_state.date_text().into());
-                        ui.set_range_status("Zeitraum geladen und gespeichert.".into());
-                        refresh_scene(&ui, &app_state, &skin_cache);
-                    }
-                    Err(error) => ui.set_range_status(format!("Einstellungen konnten nicht gespeichert werden: {error}").into()),
-                },
-                Err(error) => ui.set_range_status(format!("Horizons-Daten konnten nicht geladen werden: {error}").into()),
-            }
-        }) {
-            ui.set_range_loading(false);
-            ui.set_range_status(format!("Ladevorgang konnte nicht gestartet werden: {error}").into());
-        }
-    });
-
-    let weak_prev = ui.as_weak();
-    let state_prev = Rc::clone(&app_state);
-    let cache_prev = Rc::clone(&skin_cache);
-    ui.on_prev_day(move || {
-        state_prev.borrow_mut().prev_day();
-        if let Some(ui) = weak_prev.upgrade() {
-            ui.set_date_text(state_prev.borrow().date_text().into());
-            refresh_scene(&ui, &state_prev.borrow(), &cache_prev);
-        }
-    });
-
-    let weak_next = ui.as_weak();
-    let state_next = Rc::clone(&app_state);
-    let cache_next = Rc::clone(&skin_cache);
-    ui.on_next_day(move || {
-        state_next.borrow_mut().next_day();
-        if let Some(ui) = weak_next.upgrade() {
-            ui.set_date_text(state_next.borrow().date_text().into());
-            refresh_scene(&ui, &state_next.borrow(), &cache_next);
-        }
-    });
-
-    let weak_auto = ui.as_weak();
-    let state_auto = Rc::clone(&app_state);
-    ui.on_toggle_auto_play(move || {
-        state_auto.borrow_mut().toggle_auto_play();
-        if let Some(ui) = weak_auto.upgrade() {
-            ui.set_auto_play(state_auto.borrow().is_auto_play());
-        }
-    });
-
-    let weak_select_center = ui.as_weak();
-    let state_center = Rc::clone(&app_state);
-    let cache_select_center = Rc::clone(&skin_cache);
-    ui.on_select_center(move |name| {
-        let mut state = state_center.borrow_mut();
-        let body_name = name.trim();
-        let target = match body_name {
-            "Sun" => crate::model::BodyId::Sun,
-            "Mercury" => crate::model::BodyId::Mercury,
-            "Venus" => crate::model::BodyId::Venus,
-            "Earth" => crate::model::BodyId::Earth,
-            "Moon" => crate::model::BodyId::Moon,
-            "Mars" => crate::model::BodyId::Mars,
-            "Jupiter" => crate::model::BodyId::Jupiter,
-            "Saturn" => crate::model::BodyId::Saturn,
-            "Uranus" => crate::model::BodyId::Uranus,
-            "Neptune" => crate::model::BodyId::Neptune,
-            "Io" => crate::model::BodyId::Io,
-            "Europa" => crate::model::BodyId::Europa,
-            "Ganymede" => crate::model::BodyId::Ganymede,
-            "Callisto" => crate::model::BodyId::Callisto,
-            "Mimas" => crate::model::BodyId::Mimas,
-            "Enceladus" => crate::model::BodyId::Enceladus,
-            "Tethys" => crate::model::BodyId::Tethys,
-            "Dione" => crate::model::BodyId::Dione,
-            "Rhea" => crate::model::BodyId::Rhea,
-            "Titan" => crate::model::BodyId::Titan,
-            "Iapetus" => crate::model::BodyId::Iapetus,
-            "Miranda" => crate::model::BodyId::Miranda,
-            "Ariel" => crate::model::BodyId::Ariel,
-            "Umbriel" => crate::model::BodyId::Umbriel,
-            "Titania" => crate::model::BodyId::Titania,
-            "Oberon" => crate::model::BodyId::Oberon,
-            "Triton" => crate::model::BodyId::Triton,
-            "Nereid" => crate::model::BodyId::Nereid,
-            "Proteus" => crate::model::BodyId::Proteus,
-            "Phobos" => crate::model::BodyId::Phobos,
-            "Deimos" => crate::model::BodyId::Deimos,
-            _ => crate::model::BodyId::Sun,
-        };
-
-        state.set_center(target);
-
-        if let Some(ui) = weak_select_center.upgrade() {
-            let camera = state.camera();
-            ui.set_selected_center_name(target.name().to_string().into());
-            ui.set_camera_azimuth_deg(camera.azimuth_deg);
-            ui.set_camera_elevation_deg(camera.elevation_deg);
-            ui.set_camera_distance_au(camera.distance_au);
-            ui.set_camera_fov_deg(camera.fov_deg);
-            refresh_scene(&ui, &state, &cache_select_center);
-        }
-    });
-
-    let weak_tick = ui.as_weak();
-    let state_tick = Rc::clone(&app_state);
-    let cache_tick = Rc::clone(&skin_cache);
-    ui.on_auto_tick(move || {
-        if state_tick.borrow().is_auto_play() {
-            let mut state = state_tick.borrow_mut();
-            let dt_days = state.auto_step_days();
-            state.advance_auto_step(dt_days);
-            let current = state.date_text();
-            if let Some(ui) = weak_tick.upgrade() {
-                ui.set_date_text(current.into());
-                refresh_scene(&ui, &state, &cache_tick);
-            }
-        }
-    });
-
-    let state_step = Rc::clone(&app_state);
-    ui.on_set_auto_step_days(move |days| {
-        state_step.borrow_mut().set_auto_step_days(days as f64);
-    });
-
-    let weak_trails = ui.as_weak();
-    let state_trails = Rc::clone(&app_state);
-    let cache_trails = Rc::clone(&skin_cache);
-    ui.on_toggle_trails(move || {
-        let mut state = state_trails.borrow_mut();
-        state.toggle_trails();
-
-        if let Some(ui) = weak_trails.upgrade() {
-            ui.set_show_trails(state.show_trails());
-            refresh_scene(&ui, &state, &cache_trails);
-        }
-    });
-
-    let weak_resize = ui.as_weak();
-    let state_resize = Rc::clone(&app_state);
-    let cache_resize = Rc::clone(&skin_cache);
-    ui.on_scene_resized(move |_viewport_width_px, _viewport_height_px| {
-        if let Some(ui) = weak_resize.upgrade() {
-            refresh_scene(&ui, &state_resize.borrow(), &cache_resize);
-        }
-    });
-
-    let weak_orbit = ui.as_weak();
-    let state_orbit = Rc::clone(&app_state);
-    let cache_orbit = Rc::clone(&skin_cache);
-    ui.on_orbit_camera(move |delta_x_px, delta_y_px| {
-        let mut state = state_orbit.borrow_mut();
-        state.orbit_by_pixels(delta_x_px, delta_y_px);
-
-        if let Some(ui) = weak_orbit.upgrade() {
-            let camera = state.camera();
-            ui.set_camera_azimuth_deg(camera.azimuth_deg);
-            ui.set_camera_elevation_deg(camera.elevation_deg);
-            ui.set_camera_distance_au(camera.distance_au);
-            ui.set_camera_fov_deg(camera.fov_deg);
-            refresh_scene(&ui, &state, &cache_orbit);
-        }
-    });
-
-    let weak_zoom = ui.as_weak();
-    let state_zoom = Rc::clone(&app_state);
-    let cache_zoom = Rc::clone(&skin_cache);
-    ui.on_zoom_camera(move |delta_steps| {
-        let mut state = state_zoom.borrow_mut();
-        state.zoom_by_steps(delta_steps);
-
-        if let Some(ui) = weak_zoom.upgrade() {
-            let camera = state.camera();
-            ui.set_camera_azimuth_deg(camera.azimuth_deg);
-            ui.set_camera_elevation_deg(camera.elevation_deg);
-            ui.set_camera_distance_au(camera.distance_au);
-            ui.set_camera_fov_deg(camera.fov_deg);
-            refresh_scene(&ui, &state, &cache_zoom);
-        }
-    });
-
-    let weak_pan = ui.as_weak();
-    let state_pan = Rc::clone(&app_state);
-    let cache_pan = Rc::clone(&skin_cache);
-    ui.on_pan_camera(move |delta_x_px, delta_y_px, viewport_width_px, viewport_height_px| {
-        let mut state = state_pan.borrow_mut();
-        state.pan_by_pixels(delta_x_px, delta_y_px, viewport_width_px, viewport_height_px);
-
-        if let Some(ui) = weak_pan.upgrade() {
-            refresh_scene(&ui, &state, &cache_pan);
-        }
-    });
-
-    let weak_key = ui.as_weak();
-    let state_key = Rc::clone(&app_state);
-    let cache_key = Rc::clone(&skin_cache);
-    ui.on_camera_key(move |action| {
-        let mut state = state_key.borrow_mut();
-
-        if let Some(ui) = weak_key.upgrade() {
-            let width = ui.get_scene_width().max(1.0);
-            let height = ui.get_scene_height().max(1.0);
-
-            match action.as_str() {
-                "pan_left" => state.pan_by_pixels(-28.0, 0.0, width, height),
-                "pan_right" => state.pan_by_pixels(28.0, 0.0, width, height),
-                "pan_up" => state.pan_by_pixels(0.0, -28.0, width, height),
-                "pan_down" => state.pan_by_pixels(0.0, 28.0, width, height),
-                "orbit_left" => state.orbit_by_degrees(-2.5, 0.0),
-                "orbit_right" => state.orbit_by_degrees(2.5, 0.0),
-                "orbit_up" => state.orbit_by_degrees(0.0, -2.0),
-                "orbit_down" => state.orbit_by_degrees(0.0, 2.0),
-                "zoom_in" => state.zoom_by_steps(1.0),
-                "zoom_out" => state.zoom_by_steps(-1.0),
-                _ => {}
-            }
-
-            let camera = state.camera();
-            ui.set_camera_azimuth_deg(camera.azimuth_deg);
-            ui.set_camera_elevation_deg(camera.elevation_deg);
-            ui.set_camera_distance_au(camera.distance_au);
-            ui.set_camera_fov_deg(camera.fov_deg);
-            refresh_scene(&ui, &state, &cache_key);
-        }
-    });
+    initialize_window(&ui, &app_state.borrow(), date_range);
+    scene::refresh_scene(&ui, &app_state.borrow(), &skin_cache);
+    handlers::register_all(
+        &ui,
+        &app_state,
+        &skin_cache,
+        &active_range,
+        &client,
+        &runtime,
+    );
 
     ui.run()
 }
 
-fn refresh_scene(ui: &MainWindow, state: &AppState, skin_cache: &Rc<RefCell<SkinCache>>) {
-    let width = ui.get_scene_width().max(1.0);
-    let height = ui.get_scene_height().max(1.0);
-    let frame = state.build_scene_frame(width, height);
+fn initialize_window(ui: &MainWindow, state: &AppState, date_range: HorizonsDateRange) {
+    ui.set_start_date(date_range.start_time().into());
+    ui.set_stop_date(date_range.stop_time().into());
 
-    let sprites: Vec<BodySprite> = frame
-        .bodies
-        .into_iter()
-        .map(|body| {
-            let tier = skin_tier_for_radius(body.radius_px);
-            let texture_opt = resolve_skin_image(&mut skin_cache.borrow_mut(), &body.sprite_stem, tier);
-            let has_texture = texture_opt.is_some();
-            let texture = texture_opt.unwrap_or_default();
-
-            BodySprite {
-                name: body.name.into(),
-                texture,
-                has_texture,
-                x_px: body.x_px,
-                y_px: body.y_px,
-                radius_px: body.radius_px,
-                color: Color::from_rgb_u8(body.color_rgb.0, body.color_rgb.1, body.color_rgb.2),
-            }
-        })
-        .collect();
-
-    let trails: Vec<BodySprite> = frame
-        .trails
-        .into_iter()
-        .map(|trail| BodySprite {
-            name: "trail".into(),
-            texture: Image::default(),
-            has_texture: false,
-            x_px: trail.x_px,
-            y_px: trail.y_px,
-            radius_px: trail.radius_px,
-            color: Color::from_argb_u8(
-                (trail.alpha.clamp(0.0, 1.0) * 255.0) as u8,
-                trail.color_rgb.0,
-                trail.color_rgb.1,
-                trail.color_rgb.2,
-            ),
-        })
-        .collect();
-
-    let model = Rc::new(VecModel::from(sprites));
-    ui.set_body_sprites(ModelRc::from(model));
-    let trail_model = Rc::new(VecModel::from(trails));
-    ui.set_trail_sprites(ModelRc::from(trail_model));
+    ui.set_date_text(state.date_text().into());
+    set_camera_properties(ui, state.camera());
+    ui.set_selected_center_name(state.selected_center().name().into());
+    ui.set_auto_step_days(state.auto_step_days() as f32);
+    ui.set_show_trails(state.show_trails());
 }
 
-fn skin_tier_for_radius(radius_px: f32) -> &'static str {
-    if radius_px < 8.0 {
-        "low"
-    } else if radius_px < 20.0 {
-        "medium"
-    } else {
-        "high"
-    }
-}
-
-fn resolve_skin_image(cache: &mut SkinCache, stem: &str, tier: &str) -> Option<Image> {
-    let cache_key = format!("{}:{}", stem, tier);
-    if let Some(image) = cache.get(&cache_key) {
-        return image.clone();
-    }
-
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let exts = ["svg", "png", "webp", "gif"];
-    let mut candidates = Vec::new();
-
-    for ext in exts {
-        candidates.push(manifest_dir.join(format!("assets/skins/{}_{}.{}", stem, tier, ext)));
-    }
-    for ext in exts {
-        candidates.push(manifest_dir.join(format!("assets/skins/{}.{}", stem, ext)));
-    }
-
-    for path in candidates {
-        if path.exists() {
-            match Image::load_from_path(&path) {
-                Ok(img) => {
-                    cache.insert(cache_key.clone(), Some(img.clone()));
-                    return Some(img);
-                }
-                Err(error) => {
-                    log::warn!("Skin konnte nicht geladen werden ({}): {}", stem, error);
-                }
-            }
-        }
-    }
-
-    cache.insert(cache_key, None);
-    None
+pub(super) fn set_camera_properties(ui: &MainWindow, camera: crate::app_state::CameraState) {
+    ui.set_camera_azimuth_deg(camera.azimuth_deg);
+    ui.set_camera_elevation_deg(camera.elevation_deg);
+    ui.set_camera_distance_au(camera.distance_au);
+    ui.set_camera_fov_deg(camera.fov_deg);
 }
