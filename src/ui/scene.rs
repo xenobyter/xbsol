@@ -46,10 +46,10 @@ impl SkinCache {
         }
 
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let exts = ["svg", "png", "webp", "gif"];
+        let extensions = ["svg", "png", "webp", "gif"];
         let mut candidates = Vec::new();
 
-        for ext in exts {
+        for ext in extensions {
             candidates.push(manifest_dir.join(format!(
                 "assets/skins/{}_{}.{}",
                 stem,
@@ -57,7 +57,7 @@ impl SkinCache {
                 ext
             )));
         }
-        for ext in exts {
+        for ext in extensions {
             candidates.push(manifest_dir.join(format!("assets/skins/{}.{}", stem, ext)));
         }
 
