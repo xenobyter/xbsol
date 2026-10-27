@@ -22,6 +22,7 @@
         "max_width=140"
     ],
     "chat.tools.terminal.autoApprove": {
-        "cargo run": true
+        "cargo run": true,
+        "cargo doc": true
     }
 }
