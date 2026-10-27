@@ -303,6 +303,8 @@ impl AppState {
         self.selected_center = body_id;
         self.camera_target_au = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
         self.camera = Self::preset_camera_for_center(body_id);
+        self.trail_history_au.clear();
+        self.sample_trails_at_current_state();
     }
 
     fn preset_camera_for_center(body_id: BodyId) -> CameraState {
@@ -488,6 +490,7 @@ impl AppState {
         };
 
         let alpha = self.current_day_progress.clamp(0.0, 1.0);
+        let center_point = self.selected_center_point_au(day, alpha);
         let mut sampled_points = Vec::new();
 
         for body_id in [
@@ -504,7 +507,7 @@ impl AppState {
                 continue;
             };
 
-            sampled_points.push((body_id, point));
+            sampled_points.push((body_id, point - center_point));
         }
 
         for (body_id, point) in sampled_points {
@@ -680,7 +683,6 @@ impl AppState {
 
     fn build_trails_for_frame(
         &self,
-        center_point: Vec3,
         basis: CameraBasis,
         params: ProjectionParams,
         width_px: f32,
@@ -693,15 +695,14 @@ impl AppState {
         let mut trails = Vec::new();
 
         for (&body_id, points) in &self.trail_history_au {
-            if !Self::is_trail_body(body_id) || points.is_empty() {
+            if body_id == self.selected_center || !Self::is_trail_body(body_id) || points.is_empty() {
                 continue;
             }
 
             let body_color = body_id.color_rgb();
             let denom = (points.len().saturating_sub(1).max(1)) as f32;
 
-            for (idx, absolute_point) in points.iter().copied().enumerate() {
-                let relative_point = absolute_point - center_point;
+            for (idx, relative_point) in points.iter().copied().enumerate() {
                 let Some((x_px, y_px, cam_z)) = Self::project_point(relative_point, basis, params, width_px, height_px) else {
                     continue;
                 };
@@ -737,7 +738,6 @@ impl AppState {
         let basis = Self::camera_basis(self.camera, self.camera_target_au);
         let params = Self::projection_params(self.camera, width_px, height_px);
         let zoom_scale = (DEFAULT_DISTANCE_AU as f64 / self.camera.distance_au as f64).clamp(MIN_RADIUS_ZOOM_SCALE, MAX_RADIUS_ZOOM_SCALE);
-        let center_point = self.selected_center_point_au(day, alpha);
         let world_bodies = self.world_bodies_for_frame(day, alpha);
 
         let mut projected = Vec::new();
@@ -750,8 +750,65 @@ impl AppState {
 
         projected.sort_by(|a, b| b.depth.partial_cmp(&a.depth).unwrap_or(std::cmp::Ordering::Equal));
 
-        let trails = self.build_trails_for_frame(center_point, basis, params, width_px, height_px);
+        let trails = self.build_trails_for_frame(basis, params, width_px, height_px);
 
         SceneFrame { bodies: projected, trails }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AppState, AU_KM};
+    use crate::model::{BodyId, DaySnapshot, EphemerisDayIndex, StateVector};
+    use chrono::{NaiveDate, TimeZone, Utc};
+    use std::collections::HashMap;
+
+    fn body_state(day: u32, x_au: f64) -> StateVector {
+        StateVector {
+            epoch: Utc
+                .with_ymd_and_hms(2026, 1, day, 0, 0, 0)
+                .single()
+                .unwrap(),
+            x_km: x_au * AU_KM,
+            y_km: 0.0,
+            z_km: 0.0,
+            vx_km_s: 0.0,
+            vy_km_s: 0.0,
+            vz_km_s: 0.0,
+        }
+    }
+
+    #[test]
+    fn trails_are_stored_relative_to_the_center_at_each_sample() {
+        let mut first_day = HashMap::new();
+        first_day.insert(BodyId::Saturn, body_state(1, 10.0));
+        first_day.insert(BodyId::Earth, body_state(1, 1.0));
+        let mut second_day = HashMap::new();
+        second_day.insert(BodyId::Saturn, body_state(2, 11.0));
+        second_day.insert(BodyId::Earth, body_state(2, 3.0));
+
+        let day_index = EphemerisDayIndex {
+            days: vec![
+                DaySnapshot {
+                    date: NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
+                    by_body: first_day,
+                },
+                DaySnapshot {
+                    date: NaiveDate::from_ymd_opt(2026, 1, 2).unwrap(),
+                    by_body: second_day,
+                },
+            ],
+            current_day_idx: 0,
+            day_lookup: HashMap::new(),
+        };
+
+        let mut state = AppState::new(day_index);
+        state.set_center(BodyId::Saturn);
+        state.next_day();
+
+        let earth_trail = &state.trail_history_au[&BodyId::Earth];
+        assert_eq!(earth_trail.len(), 2);
+        assert!((earth_trail[0].x + 9.0).abs() < 1e-10);
+        assert!((earth_trail[1].x + 8.0).abs() < 1e-10);
     }
 }
